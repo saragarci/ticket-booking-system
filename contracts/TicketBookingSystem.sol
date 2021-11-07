@@ -1,10 +1,55 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./Poster.sol";
+import "./Ticket.sol";
+
 contract TicketBookingSystem {
 
+/*
+ * Task 1
+ *
+ *
+ */
 
-// seat : struct
+address private owner;
+
+Show [] shows;
+
+struct Show {
+  string title;
+  uint seatsCount;
+  mapping (uint => Seat) seats;
+}
+
+struct Seat {
+  uint id;
+  string showTitle;
+  uint date; // date plus time
+  uint price;
+  uint col; // number
+  uint row;
+  string seatView;
+  bool isAvailable;
+}
+
+constructor() {
+  owner = msg.sender;
+  initializeShows()
+}
+
+function initializeShows() private {
+  // add two different shows
+}
+
+modifier onlyOwner() {
+    require(isOwner());
+    _;
+}
+
+function isOwner() public view returns (bool) {
+    return msg.sender == owner;
+}
 
 /*
 Task 2:

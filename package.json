@@ -1,0 +1,14 @@
+{
+  "name": "ticket-booking-system",
+  "version": "1.0.0",
+  "description": "Ethereum DApp",
+  "author": "Sara Garci",
+  "license": "MIT",
+  "devDependencies": {
+    "truffle-assertions": "^0.9.2"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.3.2",
+    "@truffle/hdwallet-provider": "^1.4.3"
+  }
+}

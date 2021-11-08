@@ -10,8 +10,10 @@ contract('TicketBookingSystem', function(accounts) {
   const customer_C = accounts[2]
   const customer_D = accounts[3]
 
-  it("Allows...", async() => {
+  // Task 1
+  it("Initializes the smart contract with shows and its seats with relevant information", async() => {
     ticketBookingSystem = await TicketBookingSystem.deployed()
-    // ...
+    const tx = await ticketBookingSystem.getShows()
+    console.log(tx);
   })
 });

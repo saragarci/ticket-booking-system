@@ -53,21 +53,33 @@ constructor() {
 }
 
 function initialiseShows() private {
+  uint newIndex;
+  
   // Show 1
   shows.push();
-	uint256 newIndex = shows.length - 1;
-	shows[newIndex].id = 0;
-	shows[newIndex].title = "Show 1";
-	shows[newIndex].date = 1234;
-	shows[newIndex].availableSeats = 3;
-	shows[newIndex].state = defaultState;
-  shows[newIndex].seats[0] = Seat({id: 0, showTitle: "Show 1", date: 1234, price: 123, col: 1, row: 2, seatView: "assja", isAvailable: true});
-  //shows[0].seats[1] = Seat({id: 1, showTitle: "Show 1", date: 1234, price: 123, col: 1, row: 2, seatView: "assja", isAvailable: true});
-  //shows[0].seats[2] = Seat({id: 2, showTitle: "Show 1", date: 1234, price: 123, col: 1, row: 2, seatView: "assja", isAvailable: true});
+	newIndex = shows.length - 1;
+  addShow(newIndex, "Cats", 1234);
 
   // Show 2
-  // ...
+  //shows.push();
+	//newIndex = shows.length - 1;
+  //addShow(newIndex, "Billy Elliot", 1234);
 }
+
+function addShow(uint _idx, string memory _title, uint _date) private {
+	shows[_idx].id = _idx;
+	shows[_idx].title = _title;
+	shows[_idx].date = _date;
+	shows[_idx].availableSeats = 3;
+	shows[_idx].state = defaultState;
+  shows[_idx].seats.push(Seat({ id: 0, showTitle: _title, date: _date, price: 123, col: 1, row: 2, seatView: "assja", isAvailable: true }));
+  /*shows[_idx].seats[1] = Seat({ id: 1, showTitle: _title, date: _date, price: 123, col: 1, row: 2, seatView: "assja", isAvailable: true });
+  shows[_idx].seats[2] = Seat({ id: 2, showTitle: _title, date: _date, price: 123, col: 1, row: 2, seatView: "assja", isAvailable: true });*/
+}
+
+  function getShows() public view returns (Show[] memory) {
+      return shows;
+  }
 
 modifier onlyOwner() {
     require(isOwner());
@@ -79,10 +91,13 @@ function isOwner() private view returns (bool) {
 }
 
 /*
-Task 2:
-
-seat must be specified by the user
+ * Task 2
+ *
+ *
  */
+
+// Task 2: seat must be specified by the user
+
 
 
 /*

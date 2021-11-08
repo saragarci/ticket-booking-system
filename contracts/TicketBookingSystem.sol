@@ -17,15 +17,29 @@ address private owner;
 Show [] shows;
 
 struct Show {
+  uint id;
   string title;
-  uint seatsCount;
-  mapping (uint => Seat) seats;
+  uint date;
+  uint availableSeats;
+  State state;
+  Seat [] seats;
+  //mapping (Seat => Ticket) seatToTicketId;
+  //mapping (Seat => Poster) seatToPosterId;
 }
+
+enum State { 
+  OnSale,
+  SoldOut,
+  Closed,
+  Cancelled
+}
+
+State constant defaultState = State.OnSale;
 
 struct Seat {
   uint id;
   string showTitle;
-  uint date; // date plus time
+  uint date;
   uint price;
   uint col; // number
   uint row;
@@ -35,11 +49,24 @@ struct Seat {
 
 constructor() {
   owner = msg.sender;
-  initializeShows()
+  initialiseShows();
 }
 
-function initializeShows() private {
-  // add two different shows
+function initialiseShows() private {
+  // Show 1
+  shows.push();
+	uint256 newIndex = shows.length - 1;
+	shows[newIndex].id = 0;
+	shows[newIndex].title = "Show 1";
+	shows[newIndex].date = 1234;
+	shows[newIndex].availableSeats = 3;
+	shows[newIndex].state = defaultState;
+  shows[newIndex].seats[0] = Seat({id: 0, showTitle: "Show 1", date: 1234, price: 123, col: 1, row: 2, seatView: "assja", isAvailable: true});
+  //shows[0].seats[1] = Seat({id: 1, showTitle: "Show 1", date: 1234, price: 123, col: 1, row: 2, seatView: "assja", isAvailable: true});
+  //shows[0].seats[2] = Seat({id: 2, showTitle: "Show 1", date: 1234, price: 123, col: 1, row: 2, seatView: "assja", isAvailable: true});
+
+  // Show 2
+  // ...
 }
 
 modifier onlyOwner() {
@@ -47,7 +74,7 @@ modifier onlyOwner() {
     _;
 }
 
-function isOwner() public view returns (bool) {
+function isOwner() private view returns (bool) {
     return msg.sender == owner;
 }
 

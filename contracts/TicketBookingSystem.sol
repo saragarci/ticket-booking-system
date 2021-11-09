@@ -53,33 +53,90 @@ constructor() {
 }
 
 function initialiseShows() private {
-  uint newIndex;
+  uint256 newIndex;
+  string memory title;
+  uint date;
+  uint56[3] memory seatPricePerRow;
+  string[3][3] memory seatViewImages;
   
   // Show 1
   shows.push();
-	newIndex = shows.length - 1;
-  addShow(newIndex, "Cats", 1234);
+  newIndex = shows.length - 1;
+  title = "The Nutcracker";
+  date = 1640714400;
+  seatPricePerRow = [10387353452306500, 12464824142767800, 14542294833229100]; // in wei
+  seatViewImages = [
+    [
+      "https://seatplan.com/uploads/reviews/thumbs600/477-20191222170421.jpeg",
+      "https://seatplan.com/uploads/reviews/thumbs600/340-20191230203323.jpeg",
+      "https://seatplan.com/uploads/reviews/thumbs600/587-20200108214108.jpeg"
+    ],
+    [
+      "https://seatplan.com/uploads/reviews/thumbs600/951-20191220124356.jpeg",
+      "https://seatplan.com/uploads/reviews/thumbs600/566-20191220124250.jpeg",
+      "https://seatplan.com/uploads/reviews/thumbs600/256-20181230133924.jpeg"
+    ],
+    [
+      "https://seatplan.com/uploads/reviews/thumbs600/63-20200206182556.jpeg",
+      "https://seatplan.com/uploads/reviews/thumbs600/397-20200206182841.jpeg",
+      "https://seatplan.com/uploads/reviews/thumbs600/14-20191228065209.jpeg"
+    ]
+  ];
+  addShow(newIndex, title, date, seatPricePerRow, seatViewImages);
 
   // Show 2
-  //shows.push();
-	//newIndex = shows.length - 1;
-  //addShow(newIndex, "Billy Elliot", 1234);
+  shows.push();
+  newIndex = shows.length - 1;
+  title = "Mary Poppins";
+  date = 1640887200;
+  seatPricePerRow = [10387353452306500, 12464824142767800, 14542294833229100]; // in wei
+  seatViewImages = [
+    [
+      "https://seatplan.com/uploads/reviews/thumbs270/165-20191207014504.jpeg",
+      "https://seatplan.com/uploads/reviews/thumbs270/35-20200125133301.jpeg",
+      "https://seatplan.com/uploads/reviews/thumbs270/23-20211102230427.jpeg"
+    ],
+    [
+      "https://seatplan.com/uploads/reviews/thumbs270/534-20190325111002.png",
+      "https://seatplan.com/uploads/reviews/thumbs270/390-20161125190507.jpeg",
+      "https://seatplan.com/uploads/reviews/thumbs270/523-20180119205206.jpeg"
+    ],
+    [
+      "https://seatplan.com/uploads/reviews/thumbs270/39-20191026155322.jpeg",
+      "https://seatplan.com/uploads/reviews/thumbs270/390-20161125190507.jpeg",
+      "https://seatplan.com/uploads/reviews/thumbs270/200-20161214130755.png"
+    ]
+  ];
+  addShow(newIndex, title, date, seatPricePerRow, seatViewImages);
 }
 
-function addShow(uint _idx, string memory _title, uint _date) private {
+function addShow(uint _idx, string memory _title, uint _date, uint56[3] memory _pricePerRow, string[3][3] memory _images) private {
 	shows[_idx].id = _idx;
 	shows[_idx].title = _title;
 	shows[_idx].date = _date;
-	shows[_idx].availableSeats = 3;
+	shows[_idx].availableSeats = 9;
 	shows[_idx].state = defaultState;
-  shows[_idx].seats.push(Seat({ id: 0, showTitle: _title, date: _date, price: 123, col: 1, row: 2, seatView: "assja", isAvailable: true }));
-  /*shows[_idx].seats[1] = Seat({ id: 1, showTitle: _title, date: _date, price: 123, col: 1, row: 2, seatView: "assja", isAvailable: true });
-  shows[_idx].seats[2] = Seat({ id: 2, showTitle: _title, date: _date, price: 123, col: 1, row: 2, seatView: "assja", isAvailable: true });*/
+  uint id=0;
+  for (uint row=0; row<3; row++) {
+    for (uint col=0; col<3; col++) {
+      shows[_idx].seats.push(Seat({
+        id: id,
+        showTitle: _title,
+        date: _date,
+        price: _pricePerRow[row],
+        col: col+1,
+        row: row+1,
+        seatView: _images[row][col],
+        isAvailable: true
+      }));
+      id++;
+    }
+  }
 }
 
-  function getShows() public view returns (Show[] memory) {
-      return shows;
-  }
+function getShows() public view returns (Show[] memory) {
+    return shows;
+}
 
 modifier onlyOwner() {
     require(isOwner());

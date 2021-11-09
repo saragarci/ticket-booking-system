@@ -110,12 +110,14 @@ function initialiseShows() private {
   addShow(newIndex, title, date, seatPricePerRow, seatViewImages);
 }
 
-function addShow(uint _idx, string memory _title, uint _date, uint56[3] memory _pricePerRow, string[3][3] memory _images) private {
-	shows[_idx].id = _idx;
-	shows[_idx].title = _title;
-	shows[_idx].date = _date;
-	shows[_idx].availableSeats = 9;
-	shows[_idx].state = defaultState;
+function addShow(uint _idx, string memory _title, uint _date, 
+  uint56[3] memory _pricePerRow, string[3][3] memory _images) private
+{
+  shows[_idx].id = _idx;
+  shows[_idx].title = _title;
+  shows[_idx].date = _date;
+  shows[_idx].availableSeats = 9;
+  shows[_idx].state = defaultState;
   uint id=0;
   for (uint row=0; row<3; row++) {
     for (uint col=0; col<3; col++) {
@@ -153,8 +155,20 @@ function isOwner() private view returns (bool) {
  *
  */
 
-// Task 2: seat must be specified by the user
+modifier validShow() {
+    // everything exists
+    // show is on sale
+    // seat is available
+    require();
+    _;
+}
 
+function buy(uint _showId, uint _date, uint _seatId) public payable
+  validShow(_showId, _date, _seatId)
+	paidEnough(shows[_showId].seats[_seatId].price)
+{
+
+}
 
 
 /*

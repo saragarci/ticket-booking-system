@@ -49,10 +49,10 @@ struct Seat {
 
 constructor() {
   owner = msg.sender;
-  initialiseShows();
+  initializeShows();
 }
 
-function initialiseShows() private {
+function initializeShows() private {
   uint256 newIndex;
   string memory title;
   uint date;
@@ -118,6 +118,7 @@ function addShow(uint _idx, string memory _title, uint _date,
   shows[_idx].date = _date;
   shows[_idx].availableSeats = 9;
   shows[_idx].state = defaultState;
+  
   uint id=0;
   for (uint row=0; row<3; row++) {
     for (uint col=0; col<3; col++) {
@@ -165,7 +166,7 @@ modifier validShow() {
 
 function buy(uint _showId, uint _date, uint _seatId) public payable
   validShow(_showId, _date, _seatId)
-	paidEnough(shows[_showId].seats[_seatId].price)
+  paidEnough(shows[_showId].seats[_seatId].price)
 {
 
 }

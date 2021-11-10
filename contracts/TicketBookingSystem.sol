@@ -67,13 +67,6 @@ modifier validRooms(uint _roomsCount, uint[][] memory _roomDetails) {
     _;
 }
 
-/*modifier validRoomAssignment(uint[][] memory _showDates,
-  uint[][] memory _roomAssignment) {
-    require(_showDates.length == _roomAssignment.length,
-      "Number of shows dates doesn't match the number of room assignments!");
-    _;
-}*/
-
 modifier validSeatView(string memory _seatViewUrl) {
     require(bytes(_seatViewUrl).length > 0, "A URL to retrieve seat views must be provided!");
     _;
@@ -86,19 +79,16 @@ constructor(uint _showsCount, string[] memory _showTitles, uint[] memory _showPr
   minNumRooms(_roomsCount)
   validRooms(_roomsCount, _roomDetails)
 {
-  require(_showsCount == _showTitles.length
+  assert(_showsCount == _showTitles.length
     && _showsCount == _showPrices.length
-    && _showsCount == _showDates.length,
-    "Show titles, prices or dates do not match the number of shows!");
+    && _showsCount == _showDates.length);
 
-  require(_showDates.length == _roomAssignment.length,
-    "Number of shows dates doesn't match the number of room assignments!");
+  assert(_showDates.length == _roomAssignment.length);
+
   for (uint i=0; i<_showDates.length; i++) {
-    require(_showDates[i].length == _roomAssignment[i].length,
-    "Number of dates doesn't match the number of room assignments!");
-    for (uint j=0; j<_showDates[i].length; j++) {
-      require(_roomAssignment[i][j] < _roomsCount, "Room assigned doesn't exist!");
-    }
+    assert(_showDates[i].length == _roomAssignment[i].length);
+    for (uint j=0; j<_showDates[i].length; j++)
+      assert(_roomAssignment[i][j] < _roomsCount);
   }
   
   owner = msg.sender;

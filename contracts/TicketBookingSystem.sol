@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.4;
 
 import "./Poster.sol";
 import "./Ticket.sol";
@@ -19,128 +19,150 @@ Show [] shows;
 struct Show {
   uint id;
   string title;
-  uint date;
-  uint availableSeats;
-  State state;
-  Seat [] seats;
-  //mapping (Seat => Ticket) seatToTicketId;
-  //mapping (Seat => Poster) seatToPosterId;
+  uint price;
+  Status status;
+  uint [] dates;
+  mapping (uint => Room) dateToRoom;
 }
 
-enum State { 
-  OnSale,
-  SoldOut,
-  Closed,
+enum Status { 
+  Scheduled,
+  Passed,
   Cancelled
 }
 
-State constant defaultState = State.OnSale;
+Status constant defaultStatus = Status.Scheduled;
 
 struct Seat {
   uint id;
-  string showTitle;
-  uint date;
-  uint price;
   uint col; // number
   uint row;
   string seatView;
   bool isAvailable;
 }
 
-constructor() {
-  owner = msg.sender;
-  initializeShows();
+struct Room {
+  uint rows;
+  uint columns;
+  uint remainingSeats;
+  Seat [][] seats;
 }
 
-function initializeShows() private {
-  uint256 newIndex;
-  string memory title;
-  uint date;
-  uint56[3] memory seatPricePerRow;
-  string[3][3] memory seatViewImages;
-  
-  // Show 1
-  shows.push();
-  newIndex = shows.length - 1;
-  title = "The Nutcracker";
-  date = 1640714400;
-  seatPricePerRow = [10387353452306500, 12464824142767800, 14542294833229100]; // in wei
-  seatViewImages = [
-    [
-      "https://seatplan.com/uploads/reviews/thumbs600/477-20191222170421.jpeg",
-      "https://seatplan.com/uploads/reviews/thumbs600/340-20191230203323.jpeg",
-      "https://seatplan.com/uploads/reviews/thumbs600/587-20200108214108.jpeg"
-    ],
-    [
-      "https://seatplan.com/uploads/reviews/thumbs600/951-20191220124356.jpeg",
-      "https://seatplan.com/uploads/reviews/thumbs600/566-20191220124250.jpeg",
-      "https://seatplan.com/uploads/reviews/thumbs600/256-20181230133924.jpeg"
-    ],
-    [
-      "https://seatplan.com/uploads/reviews/thumbs600/63-20200206182556.jpeg",
-      "https://seatplan.com/uploads/reviews/thumbs600/397-20200206182841.jpeg",
-      "https://seatplan.com/uploads/reviews/thumbs600/14-20191228065209.jpeg"
-    ]
-  ];
-  addShow(newIndex, title, date, seatPricePerRow, seatViewImages);
+mapping (uint => uint) showIdToTokenId;
+mapping (uint => uint) showIdToPosterId;
 
-  // Show 2
-  shows.push();
-  newIndex = shows.length - 1;
-  title = "Mary Poppins";
-  date = 1640887200;
-  seatPricePerRow = [10387353452306500, 12464824142767800, 14542294833229100]; // in wei
-  seatViewImages = [
-    [
-      "https://seatplan.com/uploads/reviews/thumbs270/165-20191207014504.jpeg",
-      "https://seatplan.com/uploads/reviews/thumbs270/35-20200125133301.jpeg",
-      "https://seatplan.com/uploads/reviews/thumbs270/23-20211102230427.jpeg"
-    ],
-    [
-      "https://seatplan.com/uploads/reviews/thumbs270/534-20190325111002.png",
-      "https://seatplan.com/uploads/reviews/thumbs270/390-20161125190507.jpeg",
-      "https://seatplan.com/uploads/reviews/thumbs270/523-20180119205206.jpeg"
-    ],
-    [
-      "https://seatplan.com/uploads/reviews/thumbs270/39-20191026155322.jpeg",
-      "https://seatplan.com/uploads/reviews/thumbs270/390-20161125190507.jpeg",
-      "https://seatplan.com/uploads/reviews/thumbs270/200-20161214130755.png"
-    ]
-  ];
-  addShow(newIndex, title, date, seatPricePerRow, seatViewImages);
+modifier minNumShows(uint _showsCount) {
+    require(_showsCount>0, "There has to be at least one show!");
+    _;
 }
 
-function addShow(uint _idx, string memory _title, uint _date, 
-  uint56[3] memory _pricePerRow, string[3][3] memory _images) private
+modifier minNumRooms(uint _roomsCount) {
+    require(_roomsCount>0, "There has to be at least one room!");
+    _;
+}
+
+modifier validRooms(uint _roomsCount, uint[][] memory _roomDetails) {
+    require(_roomsCount == _roomDetails.length,
+      "Number of rooms doesn't match the number of room details!");
+    _;
+}
+
+/*modifier validRoomAssignment(uint[][] memory _showDates,
+  uint[][] memory _roomAssignment) {
+    require(_showDates.length == _roomAssignment.length,
+      "Number of shows dates doesn't match the number of room assignments!");
+    _;
+}*/
+
+modifier validSeatView(string memory _seatViewUrl) {
+    require(bytes(_seatViewUrl).length > 0, "A URL to retrieve seat views must be provided!");
+    _;
+}
+
+constructor(uint _showsCount, string[] memory _showTitles, uint[] memory _showPrices,
+  uint[][] memory _showDates, uint _roomsCount, uint[][] memory _roomDetails,
+  uint[][] memory _roomAssignment, string memory _seatViewUrl)
+  minNumShows(_showsCount)
+  minNumRooms(_roomsCount)
+  validRooms(_roomsCount, _roomDetails)
 {
+  require(_showsCount == _showTitles.length
+    && _showsCount == _showPrices.length
+    && _showsCount == _showDates.length,
+    "Show titles, prices or dates do not match the number of shows!");
+
+  require(_showDates.length == _roomAssignment.length,
+    "Number of shows dates doesn't match the number of room assignments!");
+  for (uint i=0; i<_showDates.length; i++) {
+    require(_showDates[i].length == _roomAssignment[i].length,
+    "Number of dates doesn't match the number of room assignments!");
+    for (uint j=0; j<_showDates[i].length; j++) {
+      require(_roomAssignment[i][j] < _roomsCount, "Room assigned doesn't exist!");
+    }
+  }
+  
+  owner = msg.sender;
+
+  for (uint i=0; i<_showsCount; i++) {
+    shows.push();
+    uint newIndex = shows.length - 1;
+    assert(newIndex == i);
+    initializeShow(i, _showTitles[i], _showPrices[i]);
+    addDatesToShow(i, _showDates[i], _roomDetails, _roomAssignment[i], _seatViewUrl);
+  }
+}
+
+function initializeShow(uint _idx, string memory _title, uint _price) private {
   shows[_idx].id = _idx;
   shows[_idx].title = _title;
-  shows[_idx].date = _date;
-  shows[_idx].availableSeats = 9;
-  shows[_idx].state = defaultState;
-  
-  uint id=0;
-  for (uint row=0; row<3; row++) {
-    for (uint col=0; col<3; col++) {
-      shows[_idx].seats.push(Seat({
+  shows[_idx].price = _price;
+  shows[_idx].status = defaultStatus;
+}
+
+function addDatesToShow(uint _idx, uint[] memory _showDates, uint[][] memory _roomDetails,
+  uint[] memory _roomAssignment, string memory _seatViewUrl) private {
+  for (uint j=0; j<_showDates.length; j++) {
+    shows[_idx].dates.push(_showDates[j]);
+    uint roomIdx = _roomAssignment[j];
+    addRoomDetails(_idx, _showDates[j], _roomDetails[roomIdx]);
+    addSeatsToRoom(_idx, _showDates[j], _seatViewUrl);
+  }
+}
+
+function addRoomDetails(uint _showId, uint _dateId, uint[] memory _roomDetails)
+  private {
+  uint rows = _roomDetails[0];
+  uint cols = _roomDetails[1];
+  shows[_showId].dateToRoom[_dateId].rows = rows;
+  shows[_showId].dateToRoom[_dateId].columns = cols;
+  shows[_showId].dateToRoom[_dateId].remainingSeats = rows*cols;
+}
+
+function addSeatsToRoom(uint _showId, uint _dateId, string memory _seatViewUrl)
+  validSeatView(_seatViewUrl)
+  private {
+  uint id = 0;
+  uint rows = shows[_showId].dateToRoom[_dateId].rows;
+  uint cols = shows[_showId].dateToRoom[_dateId].columns;
+  for (uint row=0; row<rows; row++) {
+    for (uint col=0; col<cols; col++) {
+      shows[_showId].dateToRoom[_dateId].seats[row][col] = Seat({
         id: id,
-        showTitle: _title,
-        date: _date,
-        price: _pricePerRow[row],
-        col: col+1,
-        row: row+1,
-        seatView: _images[row][col],
+        col: col,
+        row: row,
+        seatView: _seatViewUrl,
         isAvailable: true
-      }));
+      });
       id++;
     }
   }
 }
 
-function getShows() public view returns (Show[] memory) {
+/*function getShows() public view returns (Show[] memory) {
     return shows;
-}
+}*/
 
+/*
 modifier onlyOwner() {
     require(isOwner());
     _;
@@ -149,6 +171,7 @@ modifier onlyOwner() {
 function isOwner() private view returns (bool) {
     return msg.sender == owner;
 }
+*/
 
 /*
  * Task 2
@@ -156,7 +179,7 @@ function isOwner() private view returns (bool) {
  *
  */
 
-modifier validShow() {
+/*modifier validShow() {
     // everything exists
     // show is on sale
     // seat is available
@@ -168,8 +191,15 @@ function buy(uint _showId, uint _date, uint _seatId) public payable
   validShow(_showId, _date, _seatId)
   paidEnough(shows[_showId].seats[_seatId].price)
 {
+  Ticket.createTicket(msg.sender, _showId, _date, _seatId);
+}*/
 
-}
+
+/*
+ * Task 2
+ *
+ *
+ */
 
 
 /*

@@ -14,14 +14,14 @@ contract TicketBookingSystem {
 
 address private owner;
 
-Show [] shows;
+Show[] shows;
 
 struct Show {
   uint id;
   string title;
   uint price;
   Status status;
-  uint [] dates;
+  uint[] dates;
   mapping (uint => Room) dateToRoom;
 }
 
@@ -45,64 +45,72 @@ struct Room {
   uint rows;
   uint columns;
   uint remainingSeats;
-  Seat [][] seats;
+  Seat[][] seats;
 }
 
 mapping (uint => uint) showIdToTokenId;
 mapping (uint => uint) showIdToPosterId;
 
-modifier minNumShows(uint _showsCount) {
-    require(_showsCount>0, "There has to be at least one show!");
+modifier validShows(string[] memory _showTitles, uint[] memory _showPrices,
+  uint[][] memory _showDates)
+{
+    require(_showTitles.length > 0
+      && _showTitles.length == _showPrices.length
+      && _showPrices.length == _showDates.length,
+      "Show titles, prices and dates do not match dimension or are empty!");
     _;
 }
 
-modifier minNumRooms(uint _roomsCount) {
-    require(_roomsCount>0, "There has to be at least one room!");
-    _;
+modifier validRooms(uint[][] memory _roomDetails)
+{
+  require(_roomDetails.length>0, "There has to be at least one room!");
+  _;
 }
 
-modifier validRooms(uint _roomsCount, uint[][] memory _roomDetails) {
-    require(_roomsCount == _roomDetails.length,
-      "Number of rooms doesn't match the number of room details!");
-    _;
+modifier validRoomAssignment(uint[][] memory _showDates, uint[][] memory _roomAssignment)
+{
+  require(_showDates.length == _roomAssignment.length,
+    "Show dates doesn't match dimension of room assigment!");
+  _;
 }
 
-modifier validSeatView(string memory _seatViewUrl) {
+modifier validRoomInAssignment(uint[] memory _showDates, uint[] memory _roomAssignment,
+  uint[][] memory _roomDetails)
+{
+  require(_showDates.length == _roomAssignment.length,
+    "Show dates doesn't match dimension of room assigment!");
+        
+  for (uint i=0; i<_roomAssignment.length; i++)
+    require(_roomAssignment[i] < _roomDetails.length,
+      "Room doesn't exist for this assignment!");
+  _;
+}
+
+modifier validSeatView(string memory _seatViewUrl)
+{
     require(bytes(_seatViewUrl).length > 0, "A URL to retrieve seat views must be provided!");
     _;
 }
 
-constructor(uint _showsCount, string[] memory _showTitles, uint[] memory _showPrices,
-  uint[][] memory _showDates, uint _roomsCount, uint[][] memory _roomDetails,
-  uint[][] memory _roomAssignment, string memory _seatViewUrl)
-  minNumShows(_showsCount)
-  minNumRooms(_roomsCount)
-  validRooms(_roomsCount, _roomDetails)
-{
-  assert(_showsCount == _showTitles.length
-    && _showsCount == _showPrices.length
-    && _showsCount == _showDates.length);
-
-  assert(_showDates.length == _roomAssignment.length);
-
-  for (uint i=0; i<_showDates.length; i++) {
-    assert(_showDates[i].length == _roomAssignment[i].length);
-    for (uint j=0; j<_showDates[i].length; j++)
-      assert(_roomAssignment[i][j] < _roomsCount);
-  }
-  
+constructor(string[] memory _showTitles, uint[] memory _showPrices, uint[][] memory _showDates,
+  uint[][] memory _roomDetails, uint[][] memory _roomAssignment, string memory _seatViewUrl)
+  validShows(_showTitles, _showPrices, _showDates)
+  validRooms(_roomDetails)
+  validRoomAssignment(_showDates, _roomAssignment)
+{ 
   owner = msg.sender;
 
-  for (uint i=0; i<_showsCount; i++) {
+  for (uint i=0; i<_showTitles.length; i++) {
     shows.push();
     uint newIndex = shows.length - 1;
     assert(newIndex == i);
-    initializeShow(i, _showTitles[i], _showPrices[i]);
+    addDetailsToShow(i, _showTitles[i], _showPrices[i]);
     addDatesToShow(i, _showDates[i], _roomDetails, _roomAssignment[i], _seatViewUrl);
   }
 }
 
-function initializeShow(uint _idx, string memory _title, uint _price) private {
+function addDetailsToShow(uint _idx, string memory _title, uint _price) private
+{
   shows[_idx].id = _idx;
   shows[_idx].title = _title;
   shows[_idx].price = _price;
@@ -110,17 +118,21 @@ function initializeShow(uint _idx, string memory _title, uint _price) private {
 }
 
 function addDatesToShow(uint _idx, uint[] memory _showDates, uint[][] memory _roomDetails,
-  uint[] memory _roomAssignment, string memory _seatViewUrl) private {
+  uint[] memory _roomAssignment, string memory _seatViewUrl)
+  validRoomInAssignment(_showDates, _roomAssignment, _roomDetails)
+  private
+{
   for (uint j=0; j<_showDates.length; j++) {
     shows[_idx].dates.push(_showDates[j]);
     uint roomIdx = _roomAssignment[j];
-    addRoomDetails(_idx, _showDates[j], _roomDetails[roomIdx]);
+    addDetailsToRoom(_idx, _showDates[j], _roomDetails[roomIdx]);
     addSeatsToRoom(_idx, _showDates[j], _seatViewUrl);
   }
 }
 
-function addRoomDetails(uint _showId, uint _dateId, uint[] memory _roomDetails)
-  private {
+function addDetailsToRoom(uint _showId, uint _dateId, uint[] memory _roomDetails)
+  private
+{
   uint rows = _roomDetails[0];
   uint cols = _roomDetails[1];
   shows[_showId].dateToRoom[_dateId].rows = rows;
@@ -130,19 +142,15 @@ function addRoomDetails(uint _showId, uint _dateId, uint[] memory _roomDetails)
 
 function addSeatsToRoom(uint _showId, uint _dateId, string memory _seatViewUrl)
   validSeatView(_seatViewUrl)
-  private {
+  private
+{
   uint id = 0;
   uint rows = shows[_showId].dateToRoom[_dateId].rows;
   uint cols = shows[_showId].dateToRoom[_dateId].columns;
   for (uint row=0; row<rows; row++) {
     for (uint col=0; col<cols; col++) {
-      shows[_showId].dateToRoom[_dateId].seats[row][col] = Seat({
-        id: id,
-        col: col,
-        row: row,
-        seatView: _seatViewUrl,
-        isAvailable: true
-      });
+      shows[_showId].dateToRoom[_dateId].seats[row][col] =
+        Seat({id: id, col: col, row: row, seatView: _seatViewUrl, isAvailable: true});
       id++;
     }
   }

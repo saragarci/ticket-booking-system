@@ -100,8 +100,12 @@ contract('TicketBookingSystem', function(accounts) {
     // customer B buys ticket for show 1, date 1, row: 1, col: 1
     let row = 1
     let col = 1
-    await ticketBookingSystem.buy(show_1_id, show_1_date_1, row, col,
+    let tx = await ticketBookingSystem.buy(show_1_id, show_1_date_1, row, col,
       {from: customer_B, value: show_1_price})
+
+    truffleAssert.eventEmitted(tx, 'TicketTransfer', (ev) => {
+      return ev.ticketId.toNumber() === ticketIdCounter
+    });
 
     let roomDetails = await ticketBookingSystem.getRoomForDate(show_1_id, show_1_date_1)
     
@@ -129,8 +133,12 @@ contract('TicketBookingSystem', function(accounts) {
 
     // customer C buys ticket for show 1, date 1, row: 0, col: 1
     row = 0
-    await ticketBookingSystem.buy(show_1_id, show_1_date_1, row, col,
+    tx = await ticketBookingSystem.buy(show_1_id, show_1_date_1, row, col,
       {from: customer_C, value: show_1_price})
+
+    truffleAssert.eventEmitted(tx, 'TicketTransfer', (ev) => {
+      return ev.ticketId.toNumber() === ticketIdCounter
+    });
 
     roomDetails = await ticketBookingSystem.getRoomForDate(show_1_id, show_1_date_1)
   
@@ -153,5 +161,10 @@ contract('TicketBookingSystem', function(accounts) {
      *  
      * ---------- SCREEN -----------
      */
+  })
+
+  // Task 3
+  it("Has a function verify that allows anyone with the token ID to validate the ticket and the address", async() => {
+  
   })
 });

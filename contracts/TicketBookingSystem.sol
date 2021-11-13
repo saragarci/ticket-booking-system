@@ -115,6 +115,8 @@ contract TicketBookingSystem {
     _;
   }
 
+  event TicketTransfer(uint ticketId);
+
   constructor(string[] memory _showTitles, uint[] memory _showPrices, uint[][] memory _showDates,
     uint[][] memory _roomDetails, uint[][] memory _roomAssignment, string memory _seatViewUrl)
     validShows(_showTitles, _showPrices, _showDates)
@@ -229,6 +231,7 @@ contract TicketBookingSystem {
   {
     uint256 ticketId = ticketingSystem.createTicket(msg.sender, _showId, _date, _seatRow, _seatCol);
     showIdToTicketId[_showId].push(ticketId);
+    emit TicketTransfer(ticketId);
     
     shows[_showId].dateToRoom[_date].seats[_seatRow][_seatCol].isAvailable = false;
     shows[_showId].dateToRoom[_date].remainingSeats = shows[_showId].dateToRoom[_date].remainingSeats - 1;
@@ -237,5 +240,15 @@ contract TicketBookingSystem {
   function getOwnerOfTicket(uint _ticketId) public view returns (address)
   {
     return (ticketingSystem.ownerOf(_ticketId));
+  }
+
+  function verify(uint _ticketId) public view returns (bool, address)
+  {
+    bool exists = ticketingSystem.ticketExists(_ticketId);
+    (uint showId, uint date, ,) = ticketingSystem.getTicketInfo(_ticketId);
+    bool isExpired = date < block.timestamp;
+    bool showIsOnSchedule = shows[showId].status == Status.Scheduled;
+    bool isValid = exists && !isExpired && showIsOnSchedule;
+    return (isValid, ticketingSystem.ownerOf(_ticketId)); 
   }
 }

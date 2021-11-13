@@ -4,7 +4,6 @@ pragma solidity 0.8.4;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 
 contract Ticket is ERC721, Ownable {
 
@@ -39,7 +38,28 @@ contract Ticket is ERC721, Ownable {
     return newTokenId;
   }
 
+  function getTicketInfo(uint256 _tokenId)
+    public view onlyOwner() returns (uint, uint, uint, uint)
+  {
+    require(_exists(_tokenId), "Ticket doesn't exist!");
+    return (
+      tokenIdToTicketInfo[_tokenId].showId,
+      tokenIdToTicketInfo[_tokenId].date,
+      tokenIdToTicketInfo[_tokenId].seatRow,
+      tokenIdToTicketInfo[_tokenId].seatCol
+    );
+  }
 
-  // burn
-  // _burn
+  function ticketExists(uint256 _tokenId)
+    public view onlyOwner() returns (bool)
+  {
+    return _exists(_tokenId);
+  }
+
+  function burnTicket(uint256 _tokenId)
+    public onlyOwner() returns (bool)
+  {
+    require(_exists(_tokenId), "Ticket doesn't exist!");
+    _burn(_tokenId);
+  }
 }

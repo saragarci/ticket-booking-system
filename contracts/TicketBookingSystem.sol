@@ -42,8 +42,8 @@ contract TicketBookingSystem {
     Seat[][] seats;
   }
 
-  mapping (uint => uint[]) showIdToTokenId;
-  mapping (uint => uint[]) showIdToPosterId;
+  mapping (uint => uint256[]) showIdToTokenId;
+  mapping (uint => uint256[]) showIdToPosterId;
 
   Ticket ticketingSystem = new Ticket();
 
@@ -208,7 +208,7 @@ contract TicketBookingSystem {
   function getRoomForDate(uint _showId, uint _date) public view 
     showExists(_showId)
     showHasDate(_showId, _date)
-    returns (Room memory room)
+    returns (Room memory)
   {
     return (shows[_showId].dateToRoom[_date]);
   }
@@ -223,27 +223,20 @@ contract TicketBookingSystem {
     return "Invalid State";
   }
 
-  /*
-  modifier onlyOwner() {
-      require(isOwner());
-      _;
-  }
-
-  function isOwner() private view returns (bool) {
-      return msg.sender == owner;
-  }
-  */
-
   function buy(uint _showId, uint _date, uint _seatRow, uint _seatCol) public payable
-    showExists(_showId)
-    showHasDate(_showId, _date)
     showOnDateHasSeatForSale(_showId, _date, _seatRow, _seatCol)
     paidEnough(shows[_showId].price)
   {
-    uint ticketId = ticketingSystem.createTicket(msg.sender, _showId, _date, _seatRow, _seatCol);
+    uint256 ticketId = ticketingSystem.createTicket(msg.sender, _showId, _date, _seatRow, _seatCol);
     showIdToTokenId[_showId].push(ticketId);
     
     shows[_showId].dateToRoom[_date].seats[_seatRow][_seatCol].isAvailable = false;
     shows[_showId].dateToRoom[_date].remainingSeats = shows[_showId].dateToRoom[_date].remainingSeats - 1;
+  }
+
+  function getOwnerOfTicket(uint _tokenId) public view 
+    returns (address)
+  {
+    return (ticketingSystem.ownerOf(_tokenId));
   }
 }

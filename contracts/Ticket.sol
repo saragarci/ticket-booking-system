@@ -6,8 +6,6 @@ import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 
-// enum: you can have more than one ticket per seat
-
 contract Ticket is ERC721, Ownable {
 
   using Counters for Counters.Counter;
@@ -30,7 +28,7 @@ contract Ticket is ERC721, Ownable {
     _tokenIds.increment();
 
     uint256 newTokenId = _tokenIds.current();
-    _safeMint(_buyer, newTokenId); // assign ticket with newTokenId to the sender address (ownership)
+    _safeMint(_buyer, newTokenId);
     tokenIdToTicketInfo[newTokenId] = TicketInfo({
       showId: _showId,
       date: _date,

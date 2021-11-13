@@ -1,10 +1,11 @@
 var TicketBookingSystem = artifacts.require('TicketBookingSystem')
 var Ticket = artifacts.require('Ticket')
+const { stubFalse } = require('lodash');
 const truffleAssert = require('truffle-assertions')
 
 contract('TicketBookingSystem', function(accounts) {   
   let ticketBookingSystem
-  let ticket
+  let ticketIdCounter = 1
   let err
 
   // Actors
@@ -35,6 +36,7 @@ contract('TicketBookingSystem', function(accounts) {
   // Room details
   const room_1_rows_count = 2
   const room_1_columns_count = 3
+  let room_1_remaining_seats = room_1_rows_count*room_1_columns_count
   const link_seat_view = "https://seatview.no/norwaycinema"
 
   /*
@@ -43,7 +45,7 @@ contract('TicketBookingSystem', function(accounts) {
    * (1, 0, A) (1, 1, A) (1, 2, A)
    * (0, 0, A) (0, 1, A) (0, 2, A)
    *  
-   * ------ SCREEN ------
+   * ---------- SCREEN -----------
    */
 
   // Task 1
@@ -64,7 +66,7 @@ contract('TicketBookingSystem', function(accounts) {
     let roomDetails = await ticketBookingSystem.getRoomForDate(show_1_id, show_1_date_1)
     assert.equal(roomDetails[0], room_1_rows_count, 'Error: Invalid number of rows')
     assert.equal(roomDetails[1], room_1_columns_count, 'Error: Invalid number of columns')
-    assert.equal(roomDetails[2], room_1_rows_count*room_1_columns_count, 'Error: Invalid number of remaining seats')
+    assert.equal(roomDetails[2], room_1_remaining_seats, 'Error: Invalid number of remaining seats')
     assert.equal(roomDetails[3].length, room_1_rows_count, 'Error: Invalid number of seat rows')
     assert.equal(roomDetails[3][0].length, room_1_columns_count, 'Error: Invalid number of seat columns')
 
@@ -99,17 +101,29 @@ contract('TicketBookingSystem', function(accounts) {
   // Task 2
   it("Has a function buy that allows B and C to get a ticket each", async() => {
     // customer B buys ticket for show 1, date 1, row: 1, col: 1
-    let tx = await ticketBookingSystem.buy(show_1_id, show_1_date_1, 1, 1,
+    let row = 1
+    let col = 1
+    await ticketBookingSystem.buy(show_1_id, show_1_date_1, row, col,
       {from: customer_B, value: show_1_price})
 
+    let roomDetails = await ticketBookingSystem.getRoomForDate(show_1_id, show_1_date_1)
+    
+    // remaining seats is 1 less
+    let remainingSeats = roomDetails[2]
+    room_1_remaining_seats -= 1
+    assert.equal(remainingSeats, room_1_remaining_seats, 'Error: Invalid number of remaining seats')
+    
     // seat not available
-    // remaining seats -1
-    // B owns token
-    //expect(await ticket.ownerOf(1)).to.equal(customer_B)
+    let seats = roomDetails[3]
+    assert.equal(seats[row][col][4], false, 'Error: Invalid isAvailable')
+
+    // B owns ticket
+    expect(await ticketBookingSystem.getOwnerOfTicket(ticketIdCounter)).to.equal(customer_B)
+    ticketIdCounter += 1
 
     // customer C *tries* to buy ticket for show 1, date 1, row: 1, col: 1
     try {
-      tx = await ticketBookingSystem.buy(show_1_id, show_1_date_1, 1, 1,
+      tx = await ticketBookingSystem.buy(show_1_id, show_1_date_1, row, col,
         {from: customer_C, value: show_1_price})
     } catch (error) {
       err = error
@@ -117,14 +131,30 @@ contract('TicketBookingSystem', function(accounts) {
     assert.ok(err instanceof Error) // But seat is not available
 
     // customer C buys ticket for show 1, date 1, row: 0, col: 1
-    tx = await ticketBookingSystem.buy(show_1_id, show_1_date_1, 0, 1,
+    row = 0
+    await ticketBookingSystem.buy(show_1_id, show_1_date_1, row, col,
       {from: customer_C, value: show_1_price})
+
+    roomDetails = await ticketBookingSystem.getRoomForDate(show_1_id, show_1_date_1)
+  
+    // remaining seats is 1 less
+    remainingSeats = roomDetails[2]
+    room_1_remaining_seats -= 1
+    assert.equal(remainingSeats, room_1_remaining_seats, 'Error: Invalid number of remaining seats')
+    
+    // seat not available
+    seats = roomDetails[3]
+    assert.equal(seats[row][col][4], false, 'Error: Invalid isAvailable')
+
+    // C owns ticket
+    expect(await ticketBookingSystem.getOwnerOfTicket(ticketIdCounter)).to.equal(customer_C)
+    ticketIdCounter += 1
 
     /*
      * (1, 0, A) (1, 1, B) (1, 2, A)
      * (0, 0, A) (0, 1, B) (0, 2, A)
      *  
-     * ------ SCREEN ------
+     * ---------- SCREEN -----------
      */
   })
 });

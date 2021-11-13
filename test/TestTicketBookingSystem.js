@@ -1,6 +1,4 @@
 var TicketBookingSystem = artifacts.require('TicketBookingSystem')
-var Ticket = artifacts.require('Ticket')
-const { stubFalse } = require('lodash');
 const truffleAssert = require('truffle-assertions')
 
 contract('TicketBookingSystem', function(accounts) {   
@@ -51,7 +49,6 @@ contract('TicketBookingSystem', function(accounts) {
   // Task 1
   it("Initializes the smart contract with two shows containing all the relevant information", async() => {
     ticketBookingSystem = await TicketBookingSystem.deployed({from: salesManager_A})
-    ticket = await Ticket.deployed({from: salesManager_A})
 
     // **** show 1 ****
     // show details

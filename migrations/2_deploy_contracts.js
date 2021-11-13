@@ -1,10 +1,6 @@
-const Ticket = artifacts.require("Ticket");
-const Poster = artifacts.require("Poster");
 const TicketBookingSystem = artifacts.require("TicketBookingSystem");
 
 module.exports = function(deployer) {
-  deployer.deploy(Ticket);
-  deployer.deploy(Poster);
   deployer.deploy(TicketBookingSystem, 
     ["Star wars", "The Lord of the Rings"], // Title per show
     [3090233503328250, 3090233503328250], // Price per show

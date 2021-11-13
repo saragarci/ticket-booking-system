@@ -42,7 +42,7 @@ contract TicketBookingSystem {
     Seat[][] seats;
   }
 
-  mapping (uint => uint256[]) showIdToTokenId;
+  mapping (uint => uint256[]) showIdToTicketId;
   mapping (uint => uint256[]) showIdToPosterId;
 
   Ticket ticketingSystem = new Ticket();
@@ -228,15 +228,14 @@ contract TicketBookingSystem {
     paidEnough(shows[_showId].price)
   {
     uint256 ticketId = ticketingSystem.createTicket(msg.sender, _showId, _date, _seatRow, _seatCol);
-    showIdToTokenId[_showId].push(ticketId);
+    showIdToTicketId[_showId].push(ticketId);
     
     shows[_showId].dateToRoom[_date].seats[_seatRow][_seatCol].isAvailable = false;
     shows[_showId].dateToRoom[_date].remainingSeats = shows[_showId].dateToRoom[_date].remainingSeats - 1;
   }
 
-  function getOwnerOfTicket(uint _tokenId) public view 
-    returns (address)
+  function getOwnerOfTicket(uint _ticketId) public view returns (address)
   {
-    return (ticketingSystem.ownerOf(_tokenId));
+    return (ticketingSystem.ownerOf(_ticketId));
   }
 }

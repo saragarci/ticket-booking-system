@@ -88,8 +88,20 @@ modifier validRoomInAssignment(uint[] memory _showDates, uint[] memory _roomAssi
 
 modifier validSeatView(string memory _seatViewUrl)
 {
-    require(bytes(_seatViewUrl).length > 0, "A URL to retrieve seat views must be provided!");
-    _;
+  require(bytes(_seatViewUrl).length > 0, "A URL to retrieve seat views must be provided!");
+  _;
+}
+
+modifier showExists(uint _showId)
+{
+  require(shows[_showId].id == _showId, "Show id doesn't exist!");
+  _;
+}
+
+modifier showHasDate(uint _showId, uint _date)
+{
+  require(shows[_showId].dateToRoom[_date].rows > 0, "Show does not have date!");
+  _;
 }
 
 constructor(string[] memory _showTitles, uint[] memory _showPrices, uint[][] memory _showDates,
@@ -148,7 +160,17 @@ function addSeatsToRoom(uint _showId, uint _dateId, string memory _seatViewUrl)
   uint rows = shows[_showId].dateToRoom[_dateId].rows;
   uint cols = shows[_showId].dateToRoom[_dateId].columns;
   for (uint row=0; row<rows; row++) {
+    // add new row
+    shows[_showId].dateToRoom[_dateId].seats.push();
+    uint newRow = shows[_showId].dateToRoom[_dateId].seats.length - 1;
+    assert(newRow == row);
+    
     for (uint col=0; col<cols; col++) {
+      // add new column
+      shows[_showId].dateToRoom[_dateId].seats[row].push();
+      uint newCol = shows[_showId].dateToRoom[_dateId].seats[row].length - 1;
+      assert(newCol == col);
+      
       shows[_showId].dateToRoom[_dateId].seats[row][col] =
         Seat({id: id, col: col, row: row, seatView: _seatViewUrl, isAvailable: true});
       id++;
@@ -156,9 +178,41 @@ function addSeatsToRoom(uint _showId, uint _dateId, string memory _seatViewUrl)
   }
 }
 
-/*function getShows() public view returns (Show[] memory) {
-    return shows;
-}*/
+function getShow(uint _showId) public view showExists(_showId) returns (
+  uint showId,
+  string memory showTitle,
+  uint showPrice,
+  string memory showStatus,
+  uint[] memory dates)
+{
+  return (
+    shows[_showId].id,
+    shows[_showId].title,
+    shows[_showId].price,
+    showStatusToString(shows[_showId].status),
+    shows[_showId].dates
+  );
+}
+
+function getRoomForDate(uint _showId, uint _date) public view 
+  showExists(_showId)
+  showHasDate(_showId, _date)
+  returns (Room memory room)
+{
+  return (
+    shows[_showId].dateToRoom[_date]
+  );
+}
+
+function showStatusToString(Status _showStatus) internal pure returns (
+  string memory)
+{ 
+  if (_showStatus == Status.Scheduled) return "Scheduled";
+  if (_showStatus == Status.Cancelled) return "Cancelled";
+  if (_showStatus == Status.Passed) return "Passed";
+
+  return "Invalid State";
+}
 
 /*
 modifier onlyOwner() {

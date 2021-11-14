@@ -11,7 +11,11 @@ contract('TicketBookingSystem', function(accounts) {
   const customer_B = accounts[1]
   const customer_C = accounts[2]
   const customer_D = accounts[3]
-
+  
+  // Tickets
+  let ticket_1_customer_B
+  let ticket_2_customer_C
+  
   // Initialization data for both shows
   // Show 1
   const show_1_id = 0
@@ -103,8 +107,9 @@ contract('TicketBookingSystem', function(accounts) {
     let tx = await ticketBookingSystem.buy(show_1_id, show_1_date_1, row, col,
       {from: customer_B, value: show_1_price})
 
-    truffleAssert.eventEmitted(tx, 'TicketTransfer', (ev) => {
-      return ev.ticketId.toNumber() === ticketIdCounter
+    truffleAssert.eventEmitted(tx, 'TicketCreated', (ev) => {
+      ticket_1_customer_B = ev.ticketId.toNumber()
+      return ticket_1_customer_B === ticketIdCounter
     });
 
     let roomDetails = await ticketBookingSystem.getRoomForDate(show_1_id, show_1_date_1)
@@ -136,8 +141,9 @@ contract('TicketBookingSystem', function(accounts) {
     tx = await ticketBookingSystem.buy(show_1_id, show_1_date_1, row, col,
       {from: customer_C, value: show_1_price})
 
-    truffleAssert.eventEmitted(tx, 'TicketTransfer', (ev) => {
-      return ev.ticketId.toNumber() === ticketIdCounter
+    truffleAssert.eventEmitted(tx, 'TicketCreated', (ev) => {
+      ticket_2_customer_C = ev.ticketId.toNumber()
+      return ticket_2_customer_C === ticketIdCounter
     });
 
     roomDetails = await ticketBookingSystem.getRoomForDate(show_1_id, show_1_date_1)
@@ -165,6 +171,27 @@ contract('TicketBookingSystem', function(accounts) {
 
   // Task 3
   it("Has a function verify that allows anyone with the token ID to validate the ticket and the address", async() => {
-  
+    // Check ticket 1
+    let tx = await ticketBookingSystem.verify(ticket_1_customer_B)
+    assert.equal(tx[0], true, 'Error: Ticket should be valid')
+    assert.equal(tx[1], customer_B, 'Error: Ticket owner should be customer B')
+
+    // Check ticket 2
+    tx = await ticketBookingSystem.verify(ticket_2_customer_C)
+    assert.equal(tx[0], true, 'Error: Ticket should be valid')
+    assert.equal(tx[1], customer_C, 'Error: Ticket owner should be customer C')
+
+    // Check non existent ticket
+    try {
+      tx = await ticketBookingSystem.verify(12345)
+    } catch (error) {
+      err = error
+    }
+    assert.ok(err instanceof Error) // Ticket doesn't exist
+  })
+
+  // Task 4
+  it("Has a function refund to refund tickets if a show gets cancelled", async() => {
+
   })
 });

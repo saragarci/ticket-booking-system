@@ -38,8 +38,8 @@ contract Ticket is ERC721, Ownable {
     return newTokenId;
   }
 
-  function getTicketInfo(uint256 _tokenId)
-    public view onlyOwner() returns (uint, uint, uint, uint)
+  function getTicketInfo(uint256 _tokenId) public view onlyOwner()
+    returns (uint, uint, uint, uint)
   {
     require(_exists(_tokenId), "Ticket doesn't exist!");
     return (
@@ -50,16 +50,13 @@ contract Ticket is ERC721, Ownable {
     );
   }
 
-  function ticketExists(uint256 _tokenId)
-    public view onlyOwner() returns (bool)
+  function ticketExists(uint256 _tokenId) public view onlyOwner() returns (bool)
   {
     return _exists(_tokenId);
   }
 
-  function burnTicket(uint256 _tokenId)
-    public onlyOwner() returns (bool)
+  function destroyTicket(uint256 _tokenId) public onlyOwner()
   {
-    require(_exists(_tokenId), "Ticket doesn't exist!");
     _burn(_tokenId);
   }
 }

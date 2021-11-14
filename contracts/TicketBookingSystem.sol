@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./Poster.sol";
 import "./Ticket.sol";
 
-contract TicketBookingSystem {
-
-  address private owner;
+contract TicketBookingSystem is Ownable {
 
   Show[] shows;
 
@@ -50,11 +49,11 @@ contract TicketBookingSystem {
   modifier validShows(string[] memory _showTitles, uint[] memory _showPrices,
     uint[][] memory _showDates)
   {
-      require(_showTitles.length > 0
-        && _showTitles.length == _showPrices.length
-        && _showPrices.length == _showDates.length,
-        "Show titles, prices and dates do not match dimension or are empty!");
-      _;
+    require(_showTitles.length > 0
+      && _showTitles.length == _showPrices.length
+      && _showPrices.length == _showDates.length,
+      "Show titles, prices and dates do not match dimension or are empty!");
+    _;
   }
 
   modifier validRooms(uint[][] memory _roomDetails)
@@ -100,8 +99,7 @@ contract TicketBookingSystem {
     _;
   }
 
-  modifier showOnDateHasSeatForSale(uint _showId, uint _date, uint _seatRow,
-    uint _seatCol)
+  modifier showOnDateHasSeatForSale(uint _showId, uint _date, uint _seatRow, uint _seatCol)
   {
     require(shows[_showId].status == Status.Scheduled, "Show is not on sale!");
     require(shows[_showId].dateToRoom[_date].remainingSeats > 0, "Show is sold out!");
@@ -110,12 +108,21 @@ contract TicketBookingSystem {
     _;
   }
 
-  modifier paidEnough(uint _price) { 
+  modifier paidEnough(uint _price)
+  { 
     require(msg.value >= _price, "Account does not have enough Ether!"); 
     _;
   }
 
-  event TicketTransfer(uint ticketId);
+  modifier ticketExists(uint _ticketId)
+  {
+    require(ticketingSystem.ticketExists(_ticketId), "Ticket doesn't exist!");
+    _;
+  }
+
+  event TicketCreated(uint ticketId);
+  event TicketDestroyed(uint ticketId);
+  event ShowCancelled(uint showId);
 
   constructor(string[] memory _showTitles, uint[] memory _showPrices, uint[][] memory _showDates,
     uint[][] memory _roomDetails, uint[][] memory _roomAssignment, string memory _seatViewUrl)
@@ -123,8 +130,6 @@ contract TicketBookingSystem {
     validRooms(_roomDetails)
     validRoomAssignment(_showDates, _roomAssignment)
   { 
-    owner = msg.sender;
-
     for (uint i=0; i<_showTitles.length; i++) {
       shows.push();
       uint newIndex = shows.length - 1;
@@ -155,8 +160,7 @@ contract TicketBookingSystem {
     }
   }
 
-  function addDetailsToRoom(uint _showId, uint _dateId, uint[] memory _roomDetails)
-    private
+  function addDetailsToRoom(uint _showId, uint _dateId, uint[] memory _roomDetails) private
   {
     uint rows = _roomDetails[0];
     uint cols = _roomDetails[1];
@@ -215,8 +219,7 @@ contract TicketBookingSystem {
     return (shows[_showId].dateToRoom[_date]);
   }
 
-  function showStatusToString(Status _showStatus) internal pure returns (
-    string memory)
+  function showStatusToString(Status _showStatus) internal pure returns (string memory)
   { 
     if (_showStatus == Status.Scheduled) return "Scheduled";
     if (_showStatus == Status.Cancelled) return "Cancelled";
@@ -231,24 +234,47 @@ contract TicketBookingSystem {
   {
     uint256 ticketId = ticketingSystem.createTicket(msg.sender, _showId, _date, _seatRow, _seatCol);
     showIdToTicketId[_showId].push(ticketId);
-    emit TicketTransfer(ticketId);
+    emit TicketCreated(ticketId);
     
     shows[_showId].dateToRoom[_date].seats[_seatRow][_seatCol].isAvailable = false;
     shows[_showId].dateToRoom[_date].remainingSeats = shows[_showId].dateToRoom[_date].remainingSeats - 1;
   }
 
-  function getOwnerOfTicket(uint _ticketId) public view returns (address)
+  function getOwnerOfTicket(uint256 _ticketId) public view returns (address)
   {
     return (ticketingSystem.ownerOf(_ticketId));
   }
 
-  function verify(uint _ticketId) public view returns (bool, address)
-  {
-    bool exists = ticketingSystem.ticketExists(_ticketId);
-    (uint showId, uint date, ,) = ticketingSystem.getTicketInfo(_ticketId);
+  function verify(uint256 _ticketId) public view returns (bool, address)
+  { 
+    (uint showId, uint date, , ) = ticketingSystem.getTicketInfo(_ticketId);
     bool isExpired = date < block.timestamp;
     bool showIsOnSchedule = shows[showId].status == Status.Scheduled;
-    bool isValid = exists && !isExpired && showIsOnSchedule;
+    bool isValid = !isExpired && showIsOnSchedule;
     return (isValid, ticketingSystem.ownerOf(_ticketId)); 
+  }
+
+  function cancelShow(uint _showId) public onlyOwner()
+  {
+    if (shows[_showId].status != Status.Cancelled) {
+      shows[_showId].status = Status.Cancelled;
+      for (uint i=0; i<showIdToTicketId[_showId].length; i++)
+        refund(showIdToTicketId[_showId][i]);
+
+      emit ShowCancelled(_showId);
+    }
+  }
+
+  function refund(uint256 _ticketId) private
+  {
+    address owner = ticketingSystem.ownerOf(_ticketId);
+    (uint showId, uint date, , ) = ticketingSystem.getTicketInfo(_ticketId);
+    uint amount = shows[showId].price;
+    bool isExpired = date < block.timestamp;
+    if (!isExpired) {
+      ticketingSystem.destroyTicket(_ticketId);
+      payable(owner).transfer(amount); // refund the Eth
+      emit TicketDestroyed(_ticketId);
+    }
   }
 }

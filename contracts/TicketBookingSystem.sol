@@ -45,6 +45,9 @@ contract TicketBookingSystem is Ownable {
   mapping (uint => uint256[]) showIdToPosterId;
 
   Ticket ticketingSystem = new Ticket();
+  Poster posterSystem = new Poster();
+
+  uint constant ACCESS_ALLOWED_BEFORE_SHOW_STARTS = 7200;
 
   modifier validShows(string[] memory _showTitles, uint[] memory _showPrices,
     uint[][] memory _showDates)
@@ -123,6 +126,7 @@ contract TicketBookingSystem is Ownable {
   event TicketCreated(uint ticketId);
   event TicketDestroyed(uint ticketId);
   event ShowCancelled(uint showId);
+  event PosterCreated(uint posterId);
 
   constructor(string[] memory _showTitles, uint[] memory _showPrices, uint[][] memory _showDates,
     uint[][] memory _roomDetails, uint[][] memory _roomAssignment, string memory _seatViewUrl)
@@ -276,5 +280,25 @@ contract TicketBookingSystem is Ownable {
       payable(owner).transfer(amount); // refund the Eth
       emit TicketDestroyed(_ticketId);
     }
+  }
+
+  function validate(uint256 _ticketId) public
+  {
+    address owner = ticketingSystem.ownerOf(_ticketId);
+    (uint showId, uint date, , ) = ticketingSystem.getTicketInfo(_ticketId);
+    require(block.timestamp > (date-ACCESS_ALLOWED_BEFORE_SHOW_STARTS)
+      && block.timestamp < date, "You can only access the show 2 hours before it starts!");
+    require(shows[showId].status == Status.Scheduled, "Show is not on schedule!");
+
+    ticketingSystem.destroyTicket(_ticketId);
+    emit TicketDestroyed(_ticketId);
+    releasePoster(owner, showId);
+  }
+
+  function releasePoster(address _attendee, uint _showId) private
+  {
+    uint256 posterId = posterSystem.createPoster(_attendee, _showId);
+    showIdToPosterId[_showId].push(posterId);
+    emit PosterCreated(posterId);
   }
 }

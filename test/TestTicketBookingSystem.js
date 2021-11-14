@@ -50,6 +50,18 @@ contract('TicketBookingSystem', function(accounts) {
    * ---------- SCREEN -----------
    */
 
+  it("get the size of the contract", function() {
+    return TicketBookingSystem.deployed().then(function(instance) {
+      var bytecode = instance.constructor._json.bytecode;
+      var deployed = instance.constructor._json.deployedBytecode;
+      var sizeOfB  = bytecode.length / 2;
+      var sizeOfD  = deployed.length / 2;
+      console.log("size of bytecode in bytes = ", sizeOfB);
+      console.log("size of deployed in bytes = ", sizeOfD);
+      console.log("initialisation and constructor code in bytes = ", sizeOfB - sizeOfD);
+    });  
+  });
+
   // Task 1
   it("Initializes the smart contract with two shows containing all the relevant information", async() => {
     ticketBookingSystem = await TicketBookingSystem.deployed({from: salesManager_A})
@@ -221,5 +233,12 @@ contract('TicketBookingSystem', function(accounts) {
     // status of show 1 after cancelling
     show_1 = await ticketBookingSystem.getShow(show_1_id)
     assert.equal(show_1[3], show_1_status, 'Error: Status should be Cancelled')
+    
+    // check ticket doesn't esxist anymore
+  })
+
+  // Task 5
+  it("Has a function validate to validate a ticket and a function releasePoster that releases a poster ID", async() => {
+
   })
 });

@@ -50,7 +50,7 @@ contract('TicketBookingSystem', function(accounts) {
    * ---------- SCREEN -----------
    */
 
-  it("get the size of the contract", function() {
+  /*it("get the size of the contract", function() {
     return TicketBookingSystem.deployed().then(function(instance) {
       var bytecode = instance.constructor._json.bytecode;
       var deployed = instance.constructor._json.deployedBytecode;
@@ -60,7 +60,7 @@ contract('TicketBookingSystem', function(accounts) {
       console.log("size of deployed in bytes = ", sizeOfD);
       console.log("initialisation and constructor code in bytes = ", sizeOfB - sizeOfD);
     });  
-  });
+  });*/
 
   // Task 1
   it("Initializes the smart contract with two shows containing all the relevant information", async() => {

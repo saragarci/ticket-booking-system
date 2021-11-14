@@ -49,47 +49,6 @@ contract TicketBookingSystem is Ownable {
 
   uint constant ACCESS_ALLOWED_BEFORE_SHOW_STARTS = 7200;
 
-  modifier validShows(string[] memory _showTitles, uint[] memory _showPrices,
-    uint[][] memory _showDates)
-  {
-    require(_showTitles.length > 0
-      && _showTitles.length == _showPrices.length
-      && _showPrices.length == _showDates.length,
-      "Show titles, prices and dates do not match dimension or are empty!");
-    _;
-  }
-
-  modifier validRooms(uint[][] memory _roomDetails)
-  {
-    require(_roomDetails.length>0, "There has to be at least one room!");
-    _;
-  }
-
-  modifier validRoomAssignment(uint[][] memory _showDates, uint[][] memory _roomAssignment)
-  {
-    require(_showDates.length == _roomAssignment.length,
-      "Show dates doesn't match dimension of room assigment!");
-    _;
-  }
-
-  modifier validRoomInAssignment(uint[] memory _showDates, uint[] memory _roomAssignment,
-    uint[][] memory _roomDetails)
-  {
-    require(_showDates.length == _roomAssignment.length,
-      "Show dates doesn't match dimension of room assigment!");
-          
-    for (uint i=0; i<_roomAssignment.length; i++)
-      require(_roomAssignment[i] < _roomDetails.length,
-        "Room doesn't exist for this assignment!");
-    _;
-  }
-
-  modifier validSeatView(string memory _seatViewUrl)
-  {
-    require(bytes(_seatViewUrl).length > 0, "A URL to retrieve seat views must be provided!");
-    _;
-  }
-
   modifier showExists(uint _showId)
   {
     require(shows[_showId].id == _showId, "Show id doesn't exist!");
@@ -130,9 +89,6 @@ contract TicketBookingSystem is Ownable {
 
   constructor(string[] memory _showTitles, uint[] memory _showPrices, uint[][] memory _showDates,
     uint[][] memory _roomDetails, uint[][] memory _roomAssignment, string memory _seatViewUrl)
-    validShows(_showTitles, _showPrices, _showDates)
-    validRooms(_roomDetails)
-    validRoomAssignment(_showDates, _roomAssignment)
   { 
     for (uint i=0; i<_showTitles.length; i++) {
       shows.push();
@@ -152,9 +108,7 @@ contract TicketBookingSystem is Ownable {
   }
 
   function addDatesToShow(uint _idx, uint[] memory _showDates, uint[][] memory _roomDetails,
-    uint[] memory _roomAssignment, string memory _seatViewUrl)
-    validRoomInAssignment(_showDates, _roomAssignment, _roomDetails)
-    private
+    uint[] memory _roomAssignment, string memory _seatViewUrl) private
   {
     for (uint j=0; j<_showDates.length; j++) {
       shows[_idx].dates.push(_showDates[j]);
@@ -173,9 +127,7 @@ contract TicketBookingSystem is Ownable {
     shows[_showId].dateToRoom[_dateId].remainingSeats = rows*cols;
   }
 
-  function addSeatsToRoom(uint _showId, uint _dateId, string memory _seatViewUrl)
-    validSeatView(_seatViewUrl)
-    private
+  function addSeatsToRoom(uint _showId, uint _dateId, string memory _seatViewUrl) private
   {
     uint id = 0;
     uint rows = shows[_showId].dateToRoom[_dateId].rows;

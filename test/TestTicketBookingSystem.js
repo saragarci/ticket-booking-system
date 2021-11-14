@@ -24,7 +24,7 @@ contract('TicketBookingSystem', function(accounts) {
   const show_1_date_1 = 1640628000
   const show_1_date_2 = 1640800800
   const show_1_dates_count = 2
-  const show_1_status = "Scheduled"
+  let show_1_status = "Scheduled"
   
   // Show 2
   const show_2_id = 1
@@ -33,7 +33,7 @@ contract('TicketBookingSystem', function(accounts) {
   const show_2_date_1 = 1640714400
   const show_2_date_2 = 1640887200
   const show_2_dates_count = 2
-  const show_2_status = "Scheduled"
+  let show_2_status = "Scheduled"
   
   // Room details
   const room_1_rows_count = 2
@@ -56,7 +56,7 @@ contract('TicketBookingSystem', function(accounts) {
 
     // **** show 1 ****
     // show details
-    const show_1 = await ticketBookingSystem.getShow(0)
+    const show_1 = await ticketBookingSystem.getShow(show_1_id)
     assert.equal(show_1[0], show_1_id, 'Error: Invalid show id')
     assert.equal(show_1[1], show_1_title, 'Error: Invalid show title')
     assert.equal(show_1[2], show_1_price, 'Error: Invalid show price')
@@ -85,7 +85,7 @@ contract('TicketBookingSystem', function(accounts) {
 
     // **** show 2 ****
     // show details
-    const show_2 = await ticketBookingSystem.getShow(1)
+    const show_2 = await ticketBookingSystem.getShow(show_2_id)
     assert.equal(show_2[0], show_2_id, 'Error: Invalid show id')
     assert.equal(show_2[1], show_2_title, 'Error: Invalid show title')
     assert.equal(show_2[2], show_2_price, 'Error: Invalid show price')
@@ -192,6 +192,34 @@ contract('TicketBookingSystem', function(accounts) {
 
   // Task 4
   it("Has a function refund to refund tickets if a show gets cancelled", async() => {
+    // balance customer B before refund
+    const balance_customerB_before = web3.utils.toBN(await web3.eth.getBalance(customer_B))
+    
+    // balance customer C before refund
+    const balance_customerC_before = web3.utils.toBN(await web3.eth.getBalance(customer_C))
 
+    // status of show 1 before cancelling
+    let show_1 = await ticketBookingSystem.getShow(show_1_id)
+    assert.equal(show_1[3], show_1_status, 'Error: Status should be Scheduled')
+
+    // cancel show 1
+    let tx = await ticketBookingSystem.cancelShow(show_1_id)
+
+    truffleAssert.eventEmitted(tx, 'ShowCancelled', (ev) => {
+      return ev.showId.toNumber() === show_1_id
+    });
+    show_1_status = "Cancelled"
+
+    // balance customer B after refund
+    const balance_customerB_after = web3.utils.toBN(await web3.eth.getBalance(customer_B))
+    expect(balance_customerB_after.sub(balance_customerB_before).toString()).to.equal(web3.utils.toBN(show_1_price).toString())
+    
+    // balance customer C after refund
+    const balance_customerC_after = web3.utils.toBN(await web3.eth.getBalance(customer_C))
+    expect(balance_customerC_after.sub(balance_customerC_before).toString()).to.equal(web3.utils.toBN(show_1_price).toString())
+    
+    // status of show 1 after cancelling
+    show_1 = await ticketBookingSystem.getShow(show_1_id)
+    assert.equal(show_1[3], show_1_status, 'Error: Status should be Cancelled')
   })
 });

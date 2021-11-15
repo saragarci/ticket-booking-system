@@ -221,5 +221,12 @@ contract('TicketBookingSystem', function(accounts) {
     // status of show 1 after cancelling
     show_1 = await ticketBookingSystem.getShow(show_1_id)
     assert.equal(show_1[3], show_1_status, 'Error: Status should be Cancelled')
+    
+    // check ticket doesn't esxist anymore
+  })
+
+  // Task 5
+  it("Has a function validate to validate a ticket and a function releasePoster that releases a poster ID", async() => {
+
   })
 });

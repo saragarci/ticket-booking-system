@@ -37,6 +37,6 @@ module.exports = function (deployer) {
     );
     
     await ticket.transferOwnership(TicketBookingSystem.address);
-    //await poster.transferOwnership(TicketBookingSystem.address);
+    await poster.transferOwnership(TicketBookingSystem.address);
   })
 };

@@ -44,7 +44,8 @@ contract TicketBookingSystem is Ownable {
   mapping (uint => uint256[]) showIdToTicketId;
   mapping (uint => uint256[]) showIdToPosterId;
 
-  Ticket ticketingSystem = new Ticket();
+  Ticket ticketingSystem;
+  Poster posterSystem;
 
   modifier validShows(string[] memory _showTitles, uint[] memory _showPrices,
     uint[][] memory _showDates)
@@ -62,14 +63,7 @@ contract TicketBookingSystem is Ownable {
     _;
   }
 
-  modifier validRoomAssignment(uint[][] memory _showDates, uint[][] memory _roomAssignment)
-  {
-    require(_showDates.length == _roomAssignment.length,
-      "Show dates doesn't match dimension of room assigment!");
-    _;
-  }
-
-  modifier validRoomInAssignment(uint[] memory _showDates, uint[] memory _roomAssignment,
+  modifier validRoomAssignment(uint[] memory _showDates, uint[] memory _roomAssignment,
     uint[][] memory _roomDetails)
   {
     require(_showDates.length == _roomAssignment.length,
@@ -125,11 +119,14 @@ contract TicketBookingSystem is Ownable {
   event ShowCancelled(uint showId);
 
   constructor(string[] memory _showTitles, uint[] memory _showPrices, uint[][] memory _showDates,
-    uint[][] memory _roomDetails, uint[][] memory _roomAssignment, string memory _seatViewUrl)
+    uint[][] memory _roomDetails, uint[][] memory _roomAssignment, string memory _seatViewUrl,
+    Ticket ticketContract, Poster posterContract)
     validShows(_showTitles, _showPrices, _showDates)
     validRooms(_roomDetails)
-    validRoomAssignment(_showDates, _roomAssignment)
   { 
+    ticketingSystem = ticketContract;
+    posterSystem = posterContract;
+
     for (uint i=0; i<_showTitles.length; i++) {
       shows.push();
       uint newIndex = shows.length - 1;
@@ -149,7 +146,7 @@ contract TicketBookingSystem is Ownable {
 
   function addDatesToShow(uint _idx, uint[] memory _showDates, uint[][] memory _roomDetails,
     uint[] memory _roomAssignment, string memory _seatViewUrl)
-    validRoomInAssignment(_showDates, _roomAssignment, _roomDetails)
+    validRoomAssignment(_showDates, _roomAssignment, _roomDetails)
     private
   {
     for (uint j=0; j<_showDates.length; j++) {

@@ -203,12 +203,12 @@ contract('TicketBookingSystem', function(accounts) {
     assert.equal(show_1[3], show_1_status, 'Error: Status should be Scheduled')
 
     // cancel show 1
-    let tx = await ticketBookingSystem.cancelShow(show_1_id, {from: salesManager_A})
+    let tx = await ticketBookingSystem.cancelShow(show_1_id)
 
-    //truffleAssert.eventEmitted(tx, 'ShowCancelled', (ev) => {
-    //  return ev.showId.toNumber() === show_1_id
-    //});
-    /*show_1_status = "Cancelled"
+    truffleAssert.eventEmitted(tx, 'ShowCancelled', (ev) => {
+      return ev.showId.toNumber() === show_1_id
+    });
+    show_1_status = "Cancelled"
 
     // balance customer B after refund
     const balance_customerB_after = web3.utils.toBN(await web3.eth.getBalance(customer_B))
@@ -222,16 +222,11 @@ contract('TicketBookingSystem', function(accounts) {
     show_1 = await ticketBookingSystem.getShow(show_1_id)
     assert.equal(show_1[3], show_1_status, 'Error: Status should be Cancelled')
     
-    // ticket doesn't exist anymore*/
+    // check ticket doesn't esxist anymore
   })
 
   // Task 5
   it("Has a function validate to validate a ticket and a function releasePoster that releases a poster ID", async() => {
-
-  })
-
-  // Task 6
-  it("Has a function tradeTicket that allows C and D to safely trade", async() => {
 
   })
 });

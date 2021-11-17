@@ -44,6 +44,7 @@ contract TicketBookingSystem is Ownable {
   mapping (uint => uint256[]) showIdToTicketId;
   mapping (uint => uint256[]) showIdToPosterId;
   mapping (uint256 => uint256) ticketsForSale;
+  mapping (uint256 => uint256[]) ticketsForExchange;
 
   Ticket ticketingSystem;
   Poster posterSystem;
@@ -111,9 +112,15 @@ contract TicketBookingSystem is Ownable {
     _;
   }
 
-  modifier ticketExists(uint _ticketId)
+  modifier ticketExists(uint256 _ticketId)
   {
     require(ticketingSystem.ticketExists(_ticketId), "Ticket doesn't exist!");
+    _;
+  }
+
+  modifier onlyTicketOwner(uint256 _ticketId)
+  {
+    require(ticketingSystem.ownerOf(_ticketId) == msg.sender, "Account is not ticket owner!");
     _;
   }
 
@@ -149,9 +156,8 @@ contract TicketBookingSystem is Ownable {
   }
 
   function addDatesToShow(uint _idx, uint[] memory _showDates, uint[][] memory _roomDetails,
-    uint[] memory _roomAssignment, string memory _seatViewUrl)
+    uint[] memory _roomAssignment, string memory _seatViewUrl) private
     validRoomAssignment(_showDates, _roomAssignment, _roomDetails)
-    private
   {
     for (uint j=0; j<_showDates.length; j++) {
       shows[_idx].dates.push(_showDates[j]);
@@ -170,9 +176,8 @@ contract TicketBookingSystem is Ownable {
     shows[_showId].dateToRoom[_dateId].remainingSeats = rows*cols;
   }
 
-  function addSeatsToRoom(uint _showId, uint _dateId, string memory _seatViewUrl)
+  function addSeatsToRoom(uint _showId, uint _dateId, string memory _seatViewUrl) private
     validSeatView(_seatViewUrl)
-    private
   {
     uint id = 0;
     uint rows = shows[_showId].dateToRoom[_dateId].rows;
@@ -259,7 +264,9 @@ contract TicketBookingSystem is Ownable {
     return (isValid, ticketingSystem.ownerOf(_ticketId)); 
   }
 
-  function cancelShow(uint _showId) public onlyOwner() showExists(_showId)
+  function cancelShow(uint _showId) public
+    onlyOwner()
+    showExists(_showId)
   {
     if (shows[_showId].status != Status.Cancelled) {
       shows[_showId].status = Status.Cancelled;
@@ -303,12 +310,15 @@ contract TicketBookingSystem is Ownable {
     emit PosterCreated(posterId);
   }
 
-  function setTicketForSale(uint256 _ticketId, uint256 _price) public {
-    require(ticketingSystem.ownerOf(_ticketId) == msg.sender, "Account is not ticket owner!");
+  function setTicketForSale(uint256 _ticketId, uint256 _price) public
+    onlyTicketOwner(_ticketId)
+  {
     ticketsForSale[_ticketId] = _price;
   }
 
-  function buyTicket(uint256 _ticketId) ticketExists(_ticketId) public payable {
+  function buyTicket(uint256 _ticketId) public payable
+    ticketExists(_ticketId)
+  {
     require(ticketsForSale[_ticketId] > 0, "Ticket is not for sale!");
     uint256 ticketCost = ticketsForSale[_ticketId];
     address ownerAddress = ticketingSystem.ownerOf(_ticketId);
@@ -318,6 +328,29 @@ contract TicketBookingSystem is Ownable {
     if (msg.value > ticketCost)
       payable(msg.sender).transfer(msg.value - ticketCost);
     tradeTicket(ownerAddress, msg.sender, _ticketId);
+  }
+
+  function setTicketForExchange(uint256 _ticketId, uint row, uint col) public
+    onlyTicketOwner(_ticketId)
+  {
+    ticketsForExchange[_ticketId] = [row, col];
+  }
+
+  function exchangeTicket(uint256 _ticketId1, uint256 _ticketId2) public
+    onlyTicketOwner(_ticketId1)
+  {
+    require(ticketsForExchange[_ticketId2].length > 0, "Ticket is not for exchange!");
+    (uint showId1, uint date1, uint row1, uint col1) = ticketingSystem.getTicketInfo(_ticketId1);
+    (uint showId2, uint date2, , ) = ticketingSystem.getTicketInfo(_ticketId2);
+    require(showId1 == showId2 && date1 == date2, "Ticket does not match show and/or date!");
+    require(row1 == ticketsForExchange[_ticketId2][0]
+      && col1 == ticketsForExchange[_ticketId2][1],
+      "This ticket doesn't have the required seat in order to be exhanged!");
+    
+    address ownerAddress1 = ticketingSystem.ownerOf(_ticketId1);
+    address ownerAddress2 = ticketingSystem.ownerOf(_ticketId2);
+    tradeTicket(ownerAddress1, ownerAddress2, _ticketId1);
+    tradeTicket(ownerAddress2, ownerAddress1, _ticketId2);
   }
 
   function tradeTicket(address _from, address _to, uint256 _ticketId) private

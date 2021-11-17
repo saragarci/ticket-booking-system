@@ -43,6 +43,7 @@ contract TicketBookingSystem is Ownable {
 
   mapping (uint => uint256[]) showIdToTicketId;
   mapping (uint => uint256[]) showIdToPosterId;
+  mapping (uint256 => uint256) ticketsForSale;
 
   Ticket ticketingSystem;
   Poster posterSystem;
@@ -232,6 +233,10 @@ contract TicketBookingSystem is Ownable {
     showOnDateHasSeatForSale(_showId, _date, _seatRow, _seatCol)
     paidEnough(shows[_showId].price)
   {
+    uint ticketCost = shows[_showId].price;
+    if (msg.value > ticketCost)
+      payable(msg.sender).transfer(msg.value - ticketCost);
+
     uint256 ticketId = ticketingSystem.createTicket(msg.sender, _showId, _date, _seatRow, _seatCol);
     showIdToTicketId[_showId].push(ticketId);
     emit TicketCreated(ticketId);
@@ -254,7 +259,7 @@ contract TicketBookingSystem is Ownable {
     return (isValid, ticketingSystem.ownerOf(_ticketId)); 
   }
 
-  function cancelShow(uint _showId) public onlyOwner()
+  function cancelShow(uint _showId) public onlyOwner() showExists(_showId)
   {
     if (shows[_showId].status != Status.Cancelled) {
       shows[_showId].status = Status.Cancelled;
@@ -296,5 +301,27 @@ contract TicketBookingSystem is Ownable {
     uint256 posterId = posterSystem.createPoster(_attendee, _showId);
     showIdToPosterId[_showId].push(posterId);
     emit PosterCreated(posterId);
+  }
+
+  function setTicketForSale(uint256 _ticketId, uint256 _price) public {
+    require(ticketingSystem.ownerOf(_ticketId) == msg.sender, "Account is not ticket owner!");
+    ticketsForSale[_ticketId] = _price;
+  }
+
+  function buyTicket(uint256 _ticketId) ticketExists(_ticketId) public payable {
+    require(ticketsForSale[_ticketId] > 0, "Ticket is not for sale!");
+    uint256 ticketCost = ticketsForSale[_ticketId];
+    address ownerAddress = ticketingSystem.ownerOf(_ticketId);
+    require(msg.value > ticketCost, "Account does not have enough Ether!");
+
+    payable(ownerAddress).transfer(ticketCost);
+    if (msg.value > ticketCost)
+      payable(msg.sender).transfer(msg.value - ticketCost);
+    tradeTicket(ownerAddress, msg.sender, _ticketId);
+  }
+
+  function tradeTicket(address _from, address _to, uint256 _ticketId) private
+  {
+    ticketingSystem.safeTransferFrom(_from, _to, _ticketId);
   }
 }

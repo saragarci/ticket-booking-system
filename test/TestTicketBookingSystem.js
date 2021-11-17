@@ -229,4 +229,9 @@ contract('TicketBookingSystem', function(accounts) {
   it("Has a function validate to validate a ticket and a function releasePoster that releases a poster ID", async() => {
 
   })
+
+  // Task 6
+  it("Has a function tradeTicket that allows C and D to safely trade", async() => {
+
+  })
 });

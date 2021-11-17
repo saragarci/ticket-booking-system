@@ -101,6 +101,9 @@ contract('TicketBookingSystem', function(accounts) {
 
   // Task 2
   it("Has a function buy that allows B and C to get a ticket each", async() => {
+    // SC balance should start with 0
+    expect(web3.utils.toBN(await web3.eth.getBalance(TicketBookingSystem.address)).toString()).to.equal("0")
+
     // customer B buys ticket for show 1, date 1, row: 1, col: 1
     let row = 1
     let col = 1
@@ -111,6 +114,9 @@ contract('TicketBookingSystem', function(accounts) {
       ticket_1_customer_B = ev.ticketId.toNumber()
       return ticket_1_customer_B === ticketIdCounter
     });
+
+    // SC balance should be 1 ticket of show1
+    expect(web3.utils.toBN(await web3.eth.getBalance(TicketBookingSystem.address)).toString()).to.equal(web3.utils.toBN(show_1_price).toString())
 
     let roomDetails = await ticketBookingSystem.getRoomForDate(show_1_id, show_1_date_1)
     
@@ -145,6 +151,9 @@ contract('TicketBookingSystem', function(accounts) {
       ticket_2_customer_C = ev.ticketId.toNumber()
       return ticket_2_customer_C === ticketIdCounter
     });
+
+    // SC balance should be 2 tickets of show1
+    expect(web3.utils.toBN(await web3.eth.getBalance(TicketBookingSystem.address)).toString()).to.equal(web3.utils.toBN(2*show_1_price).toString())
 
     roomDetails = await ticketBookingSystem.getRoomForDate(show_1_id, show_1_date_1)
   
@@ -183,7 +192,7 @@ contract('TicketBookingSystem', function(accounts) {
 
     // Check non existent ticket
     try {
-      tx = await ticketBookingSystem.verify(12345)
+      await ticketBookingSystem.verify(12345)
     } catch (error) {
       err = error
     }
@@ -222,7 +231,22 @@ contract('TicketBookingSystem', function(accounts) {
     show_1 = await ticketBookingSystem.getShow(show_1_id)
     assert.equal(show_1[3], show_1_status, 'Error: Status should be Cancelled')
     
-    // check ticket doesn't esxist anymore
+    // Tickets don't exist anymore (they have been burned)
+    try {
+      await ticketBookingSystem.getOwnerOfTicket(ticket_1_customer_B)
+    } catch (error) {
+      err = error
+    }
+    assert.ok(err instanceof Error)
+    assert.equal(err.message, 'Returned error: VM Exception while processing transaction: revert ERC721: owner query for nonexistent token')
+  
+    try {
+      await ticketBookingSystem.getOwnerOfTicket(ticket_2_customer_C)
+    } catch (error) {
+      err = error
+    }
+    assert.ok(err instanceof Error)
+    assert.equal(err.message, 'Returned error: VM Exception while processing transaction: revert ERC721: owner query for nonexistent token')
   })
 
   // Task 5

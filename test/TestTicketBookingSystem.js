@@ -15,6 +15,9 @@ contract('TicketBookingSystem', function(accounts) {
   // Tickets
   let ticket_1_customer_B
   let ticket_2_customer_C
+  let ticket_3_customer_C
+  let ticket_4_customer_C
+  let ticket_5_customer_D
   
   // Initialization data for both shows
   // Show 1
@@ -104,10 +107,10 @@ contract('TicketBookingSystem', function(accounts) {
     // SC balance should start with 0
     expect(web3.utils.toBN(await web3.eth.getBalance(TicketBookingSystem.address)).toString()).to.equal("0")
 
-    // customer B buys ticket for show 1, date 1, row: 1, col: 1
+    // customer B buys ticket for show 1, date 2, row: 1, col: 1
     let row = 1
     let col = 1
-    let tx = await ticketBookingSystem.buy(show_1_id, show_1_date_1, row, col,
+    let tx = await ticketBookingSystem.buy(show_1_id, show_1_date_2, row, col,
       {from: customer_B, value: show_1_price})
 
     truffleAssert.eventEmitted(tx, 'TicketCreated', (ev) => {
@@ -118,7 +121,7 @@ contract('TicketBookingSystem', function(accounts) {
     // SC balance should be 1 ticket of show1
     expect(web3.utils.toBN(await web3.eth.getBalance(TicketBookingSystem.address)).toString()).to.equal(web3.utils.toBN(show_1_price).toString())
 
-    let roomDetails = await ticketBookingSystem.getRoomForDate(show_1_id, show_1_date_1)
+    let roomDetails = await ticketBookingSystem.getRoomForDate(show_1_id, show_1_date_2)
     
     // remaining seats is 1 less
     let remainingSeats = roomDetails[2]
@@ -133,18 +136,18 @@ contract('TicketBookingSystem', function(accounts) {
     expect(await ticketBookingSystem.getOwnerOfTicket(ticketIdCounter)).to.equal(customer_B)
     ticketIdCounter += 1
 
-    // customer C *tries* to buy ticket for show 1, date 1, row: 1, col: 1
+    // customer C *tries* to buy ticket for show 1, date 2, row: 1, col: 1
     try {
-      tx = await ticketBookingSystem.buy(show_1_id, show_1_date_1, row, col,
+      tx = await ticketBookingSystem.buy(show_1_id, show_1_date_2, row, col,
         {from: customer_C, value: show_1_price})
     } catch (error) {
       err = error
     }
     assert.ok(err instanceof Error) // But seat is not available
 
-    // customer C buys ticket for show 1, date 1, row: 0, col: 1
+    // customer C buys ticket for show 1, date 2, row: 0, col: 1
     row = 0
-    tx = await ticketBookingSystem.buy(show_1_id, show_1_date_1, row, col,
+    tx = await ticketBookingSystem.buy(show_1_id, show_1_date_2, row, col,
       {from: customer_C, value: show_1_price})
 
     truffleAssert.eventEmitted(tx, 'TicketCreated', (ev) => {
@@ -155,7 +158,7 @@ contract('TicketBookingSystem', function(accounts) {
     // SC balance should be 2 tickets of show1
     expect(web3.utils.toBN(await web3.eth.getBalance(TicketBookingSystem.address)).toString()).to.equal(web3.utils.toBN(2*show_1_price).toString())
 
-    roomDetails = await ticketBookingSystem.getRoomForDate(show_1_id, show_1_date_1)
+    roomDetails = await ticketBookingSystem.getRoomForDate(show_1_id, show_1_date_2)
   
     // remaining seats is 1 less
     remainingSeats = roomDetails[2]
@@ -219,6 +222,16 @@ contract('TicketBookingSystem', function(accounts) {
     });
     show_1_status = "Cancelled"
 
+    // ticket customer B is destroyed
+    truffleAssert.eventEmitted(tx, 'TicketDestroyed', (ev) => {
+      return ticket_1_customer_B === ev.ticketId.toNumber()
+    });
+
+    // ticket customer C is destroyed
+    truffleAssert.eventEmitted(tx, 'TicketDestroyed', (ev) => {
+      return ticket_2_customer_C == ev.ticketId.toNumber()
+    });
+
     // balance customer B after refund
     const balance_customerB_after = web3.utils.toBN(await web3.eth.getBalance(customer_B))
     expect(balance_customerB_after.sub(balance_customerB_before).toString()).to.equal(web3.utils.toBN(show_1_price).toString())
@@ -247,15 +260,76 @@ contract('TicketBookingSystem', function(accounts) {
     }
     assert.ok(err instanceof Error)
     assert.equal(err.message, 'Returned error: VM Exception while processing transaction: revert ERC721: owner query for nonexistent token')
+  
+    // SC balance should start with 0
+    expect(web3.utils.toBN(await web3.eth.getBalance(TicketBookingSystem.address)).toString()).to.equal("0")
   })
 
   // Task 5
   it("Has a function validate to validate a ticket and a function releasePoster that releases a poster ID", async() => {
+    // **** customer C buys 2 tickets ****
+    // show 2, date 1, row: 1, col: 1
+    let row = 1
+    let col = 1
+    let tx = await ticketBookingSystem.buy(show_2_id, show_2_date_1, row, col,
+      {from: customer_C, value: show_2_price})
 
+    truffleAssert.eventEmitted(tx, 'TicketCreated', (ev) => {
+      ticket_3_customer_C = ev.ticketId.toNumber()
+      return ticket_3_customer_C === ticketIdCounter
+    });
+
+    // C owns the ticket
+    expect(await ticketBookingSystem.getOwnerOfTicket(ticketIdCounter)).to.equal(customer_C)
+    ticketIdCounter += 1
+
+    // show 2, date 2, row: 1, col: 1
+    row = 1
+    col = 1
+    tx = await ticketBookingSystem.buy(show_2_id, show_2_date_2, row, col,
+      {from: customer_C, value: show_2_price})
+
+    truffleAssert.eventEmitted(tx, 'TicketCreated', (ev) => {
+      ticket_4_customer_C = ev.ticketId.toNumber()
+      return ticket_4_customer_C === ticketIdCounter
+    });
+
+    // C owns the ticket
+    expect(await ticketBookingSystem.getOwnerOfTicket(ticketIdCounter)).to.equal(customer_C)
+    ticketIdCounter += 1
+
+    // ticket 1 should be ready to be validated
+    await ticketBookingSystem.validate(ticket_3_customer_C, {from: salesManager_A})
+  
+    // ticket is destroyed
+
+    // poster is released
+
+    // ticket 2 should not be ready to validate yet
+    try {
+      await ticketBookingSystem.validate(ticket_4_customer_C, {from: salesManager_A})
+    } catch (error) {
+      err = error
+    }
+    assert.ok(err instanceof Error)
+    assert.equal(err.message, 'Returned error: VM Exception while processing transaction: revert You can only access the show 2 hours before it starts! -- Reason given: You can only access the show 2 hours before it starts!.')
   })
 
   // Task 6
   it("Has a function tradeTicket that allows C and D to safely trade", async() => {
+    // show 2, date 2, row: 0, col: 0
+    let row = 0
+    let col = 0
+    let tx = await ticketBookingSystem.buy(show_2_id, show_2_date_2, row, col,
+      {from: customer_D, value: show_2_price})
 
+    truffleAssert.eventEmitted(tx, 'TicketCreated', (ev) => {
+      ticket_5_customer_D = ev.ticketId.toNumber()
+      return ticket_5_customer_D === ticketIdCounter
+    });
+
+    // D owns the ticket
+    expect(await ticketBookingSystem.getOwnerOfTicket(ticketIdCounter)).to.equal(customer_D)
+    ticketIdCounter += 1
   })
 });

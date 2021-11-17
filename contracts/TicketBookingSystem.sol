@@ -291,15 +291,17 @@ contract TicketBookingSystem is Ownable {
   }
 
   function validate(uint256 _ticketId) public
+    onlyOwner()
   {
     address owner = ticketingSystem.ownerOf(_ticketId);
     (uint showId, uint date, , ) = ticketingSystem.getTicketInfo(_ticketId);
     require(block.timestamp > (date-ACCESS_ALLOWED_BEFORE)
       && block.timestamp < date, "You can only access the show 2 hours before it starts!");
     require(shows[showId].status == Status.Scheduled, "Show is not on schedule!");
-
+    
     ticketingSystem.destroyTicket(_ticketId);
     emit TicketDestroyed(_ticketId);
+
     releasePoster(owner, showId);
   }
 

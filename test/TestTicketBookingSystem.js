@@ -401,7 +401,52 @@ contract('TicketBookingSystem', function(accounts) {
       return ticket_traded === ticket_for_sale
     });
 
+    // now C owns the ticket
+    expect(await ticketBookingSystem.getOwnerOfTicket(ticket_5_customer_D)).to.equal(customer_C)
+
     // **** trade ticket for another one ****  
-    // D exchanges ticket with C
+    // C approves that the system transfers the ticket
+    await ticketSystem.approve(ticketBookingSystem.address, ticket_4_customer_C, {from: customer_C});
+    // then sets the ticket for exchange with his/her preferences of the ticket he/she wants in exchange
+    const desired_row = 0
+    const desired_col = 1
+    tx = await ticketBookingSystem.setTicketForExchange(ticket_4_customer_C, desired_row, desired_col, {from: customer_C});
+
+    // D receives event that a new ticket is for exchange
+    truffleAssert.eventEmitted(tx, 'TicketForExchange', (ev) => {
+      ticket_for_exchange = ev.ticketId.toNumber()
+      ticket_for_exchange_row = ev.row.toNumber()
+      ticket_for_exchange_col = ev.column.toNumber()
+      return ticket_for_exchange === ticket_4_customer_C
+    });
+
+    // D can check details of that ticket
+    ticket_info = await ticketSystem.getTicketInfo(ticket_for_exchange)
+    expect(ticket_info[0].toNumber()).to.equal(show_2_id)
+
+    // and given that D has the ticket that matches the needs of C
+    ticket_info = await ticketSystem.getTicketInfo(ticket_6_customer_D)
+    expect(ticket_info[2].toNumber()).to.equal(ticket_for_exchange_row)
+    expect(ticket_info[3].toNumber()).to.equal(ticket_for_exchange_col)
+
+    // first D needs to approve the transfer
+    await ticketSystem.approve(ticketBookingSystem.address, ticket_6_customer_D, {from: customer_D});
+    // then D can exchange the ticket with C if D is also interested
+    tx = await ticketBookingSystem.exchangeTicket(ticket_6_customer_D, ticket_for_exchange, {from: customer_D});
+
+    // finally, an event for each ticket is sent after the trade is done
+    truffleAssert.eventEmitted(tx, 'TicketTraded', (ev) => {
+      ticket_traded = ev.ticketId.toNumber()
+      return ticket_traded === ticket_6_customer_D
+    });
+
+    truffleAssert.eventEmitted(tx, 'TicketTraded', (ev) => {
+      ticket_traded = ev.ticketId.toNumber()
+      return ticket_traded === ticket_for_exchange
+    });
+
+    // now the tickets have been exchanged
+    expect(await ticketBookingSystem.getOwnerOfTicket(ticket_6_customer_D)).to.equal(customer_C)
+    expect(await ticketBookingSystem.getOwnerOfTicket(ticket_4_customer_C)).to.equal(customer_D)
   })
 });

@@ -1,8 +1,10 @@
+var Ticket = artifacts.require('Ticket')
 var TicketBookingSystem = artifacts.require('TicketBookingSystem')
 const truffleAssert = require('truffle-assertions')
 
 contract('TicketBookingSystem', function(accounts) {   
   let ticketBookingSystem
+  let ticketSystem
   let ticketIdCounter = 1
   let posterIdCounter = 1
   let err
@@ -19,7 +21,8 @@ contract('TicketBookingSystem', function(accounts) {
   let ticket_3_customer_C
   let ticket_4_customer_C
   let ticket_5_customer_D
-
+  let ticket_6_customer_D
+  
   // Posters
   let poster_1_customer_C
   
@@ -59,6 +62,7 @@ contract('TicketBookingSystem', function(accounts) {
 
   // Task 1
   it("Initializes the smart contract with two shows containing all the relevant information", async() => {
+    ticketSystem = await Ticket.deployed({from: salesManager_A})
     ticketBookingSystem = await TicketBookingSystem.deployed({from: salesManager_A})
 
     // **** show 1 ****
@@ -340,7 +344,7 @@ contract('TicketBookingSystem', function(accounts) {
 
   // Task 6
   it("Has a function tradeTicket that allows C and D to safely trade", async() => {
-    // **** trade ticket for Ether ****
+    // **** customer D buys 2 tickets ****
     // show 2, date 2, row: 0, col: 0
     let row = 0
     let col = 0
@@ -355,9 +359,49 @@ contract('TicketBookingSystem', function(accounts) {
     // D owns the ticket
     expect(await ticketBookingSystem.getOwnerOfTicket(ticketIdCounter)).to.equal(customer_D)
     ticketIdCounter += 1
+
+    // show 2, date 2, row: 0, col: 1
+    row = 0
+    col = 1
+    tx = await ticketBookingSystem.buy(show_2_id, show_2_date_2, row, col,
+      {from: customer_D, value: show_2_price})
+
+    truffleAssert.eventEmitted(tx, 'TicketCreated', (ev) => {
+      ticket_6_customer_D = ev.ticketId.toNumber()
+      return ticket_6_customer_D === ticketIdCounter
+    });
+
+    // D owns the ticket
+    expect(await ticketBookingSystem.getOwnerOfTicket(ticketIdCounter)).to.equal(customer_D)
+    ticketIdCounter += 1
   
-  
+    // **** trade ticket for Ether ****
+    // D approves that the system transfers the ticket
+    await ticketSystem.approve(ticketBookingSystem.address, ticket_5_customer_D, {from: customer_D});
+    // then sets the ticket for sale
+    tx = await ticketBookingSystem.setTicketForSale(ticket_5_customer_D, 2*show_2_price, {from: customer_D});
+
+    // C receives event that a new ticket is for sale
+    truffleAssert.eventEmitted(tx, 'TicketForSale', (ev) => {
+      ticket_for_sale = ev.ticketId.toNumber()
+      ticket_for_sale_price = ev.price.toNumber()
+      return ticket_for_sale === ticket_5_customer_D
+    });
+
+    // C can check details of that ticket
+    let ticket_info = await ticketSystem.getTicketInfo(ticket_for_sale)
+    expect(ticket_info[0].toNumber()).to.equal(show_2_id)
+
+    // then buy the ticket from D
+    tx = await ticketBookingSystem.buyTicketForTrade(ticket_for_sale, {from: customer_C, value: 2*show_2_price});
+
+    // finally, an event is sent after the trade is done
+    truffleAssert.eventEmitted(tx, 'TicketTraded', (ev) => {
+      ticket_traded = ev.ticketId.toNumber()
+      return ticket_traded === ticket_for_sale
+    });
+
     // **** trade ticket for another one ****  
-  
+    // D exchanges ticket with C
   })
 });

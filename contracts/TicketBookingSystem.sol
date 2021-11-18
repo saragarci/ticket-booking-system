@@ -128,6 +128,9 @@ contract TicketBookingSystem is Ownable {
   event TicketDestroyed(uint ticketId);
   event ShowCancelled(uint showId);
   event PosterCreated(uint posterId);
+  event TicketForSale(uint ticketId, uint price);
+  event TicketForExchange(uint ticketId, uint row, uint column);
+  event TicketTraded(uint ticketId);
 
   constructor(string[] memory _showTitles, uint[] memory _showPrices, uint[][] memory _showDates,
     uint[][] memory _roomDetails, uint[][] memory _roomAssignment, string memory _seatViewUrl,
@@ -321,26 +324,29 @@ contract TicketBookingSystem is Ownable {
     onlyTicketOwner(_ticketId)
   {
     ticketsForSale[_ticketId] = _price;
+    emit TicketForSale(_ticketId, _price);
   }
 
-  function buyTicket(uint256 _ticketId) public payable
+  function buyTicketForTrade(uint256 _ticketId) public payable
     ticketExists(_ticketId)
   {
     require(ticketsForSale[_ticketId] > 0, "Ticket is not for sale!");
     uint256 ticketCost = ticketsForSale[_ticketId];
     address ownerAddress = ticketingSystem.ownerOf(_ticketId);
-    require(msg.value > ticketCost, "Account does not have enough Ether!");
+    require(msg.value >= ticketCost, "Account does not have enough Ether!");
 
+    delete ticketsForSale[_ticketId];
     payable(ownerAddress).transfer(ticketCost);
     if (msg.value > ticketCost)
       payable(msg.sender).transfer(msg.value - ticketCost);
     tradeTicket(ownerAddress, msg.sender, _ticketId);
   }
 
-  function setTicketForExchange(uint256 _ticketId, uint row, uint col) public
+  function setTicketForExchange(uint256 _ticketId, uint _row, uint _col) public
     onlyTicketOwner(_ticketId)
   {
-    ticketsForExchange[_ticketId] = [row, col];
+    ticketsForExchange[_ticketId] = [_row, _col];
+    emit TicketForExchange(_ticketId, _row, _col);
   }
 
   function exchangeTicket(uint256 _ticketId1, uint256 _ticketId2) public
@@ -354,6 +360,7 @@ contract TicketBookingSystem is Ownable {
       && col1 == ticketsForExchange[_ticketId2][1],
       "This ticket doesn't have the required seat in order to be exhanged!");
     
+    delete ticketsForExchange[_ticketId2];
     address ownerAddress1 = ticketingSystem.ownerOf(_ticketId1);
     address ownerAddress2 = ticketingSystem.ownerOf(_ticketId2);
     tradeTicket(ownerAddress1, ownerAddress2, _ticketId1);
@@ -363,6 +370,7 @@ contract TicketBookingSystem is Ownable {
   function tradeTicket(address _from, address _to, uint256 _ticketId) private
   {
     ticketingSystem.safeTransferFrom(_from, _to, _ticketId);
+    emit TicketTraded(_ticketId);
   }
 
   //function destroy()

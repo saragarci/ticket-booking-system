@@ -38,8 +38,7 @@ contract Ticket is ERC721, Ownable {
     return newTokenId;
   }
 
-  function getTicketInfo(uint256 _tokenId) public view onlyOwner()
-    returns (uint, uint, uint, uint)
+  function getTicketInfo(uint256 _tokenId) public view returns (uint, uint, uint, uint)
   {
     require(_exists(_tokenId), "Ticket doesn't exist!");
     return (

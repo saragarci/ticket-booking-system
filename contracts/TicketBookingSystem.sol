@@ -255,6 +255,11 @@ contract TicketBookingSystem is Ownable {
     return (ticketingSystem.ownerOf(_ticketId));
   }
 
+  function getOwnerOfPoster(uint256 _posterId) public view returns (address)
+  {
+    return (posterSystem.ownerOf(_posterId));
+  }
+
   function verify(uint256 _ticketId) public view returns (bool, address)
   { 
     (uint showId, uint date, , ) = ticketingSystem.getTicketInfo(_ticketId);
@@ -359,4 +364,7 @@ contract TicketBookingSystem is Ownable {
   {
     ticketingSystem.safeTransferFrom(_from, _to, _ticketId);
   }
+
+  //function destroy()
+  //send fund to owner
 }

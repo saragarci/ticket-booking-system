@@ -4,6 +4,7 @@ const truffleAssert = require('truffle-assertions')
 contract('TicketBookingSystem', function(accounts) {   
   let ticketBookingSystem
   let ticketIdCounter = 1
+  let posterIdCounter = 1
   let err
 
   // Actors
@@ -18,6 +19,9 @@ contract('TicketBookingSystem', function(accounts) {
   let ticket_3_customer_C
   let ticket_4_customer_C
   let ticket_5_customer_D
+
+  // Posters
+  let poster_1_customer_C
   
   // Initialization data for both shows
   // Show 1
@@ -299,11 +303,30 @@ contract('TicketBookingSystem', function(accounts) {
     ticketIdCounter += 1
 
     // ticket 1 should be ready to be validated
-    await ticketBookingSystem.validate(ticket_3_customer_C, {from: salesManager_A})
+    tx = await ticketBookingSystem.validate(ticket_3_customer_C, {from: salesManager_A})
   
     // ticket is destroyed
+    truffleAssert.eventEmitted(tx, 'TicketDestroyed', (ev) => {
+      return ticket_3_customer_C == ev.ticketId.toNumber()
+    });
+
+    try {
+      await ticketBookingSystem.getOwnerOfTicket(ticket_3_customer_C)
+    } catch (error) {
+      err = error
+    }
+    assert.ok(err instanceof Error)
+    assert.equal(err.message, 'Returned error: VM Exception while processing transaction: revert ERC721: owner query for nonexistent token')
 
     // poster is released
+    truffleAssert.eventEmitted(tx, 'PosterCreated', (ev) => {
+      poster_1_customer_C = ev.posterId.toNumber()
+      return poster_1_customer_C == posterIdCounter
+    });
+
+    // C owns the poster
+    expect(await ticketBookingSystem.getOwnerOfPoster(posterIdCounter)).to.equal(customer_C)
+    posterIdCounter += 1
 
     // ticket 2 should not be ready to validate yet
     try {
@@ -317,6 +340,7 @@ contract('TicketBookingSystem', function(accounts) {
 
   // Task 6
   it("Has a function tradeTicket that allows C and D to safely trade", async() => {
+    // **** trade ticket for Ether ****
     // show 2, date 2, row: 0, col: 0
     let row = 0
     let col = 0
@@ -331,5 +355,9 @@ contract('TicketBookingSystem', function(accounts) {
     // D owns the ticket
     expect(await ticketBookingSystem.getOwnerOfTicket(ticketIdCounter)).to.equal(customer_D)
     ticketIdCounter += 1
+  
+  
+    // **** trade ticket for another one ****  
+  
   })
 });

@@ -41,16 +41,26 @@ contract TicketBookingSystem is Ownable {
     Seat[][] seats;
   }
 
+  // all tickets indexed by showId
   mapping (uint => uint256[]) showIdToTicketId;
+
+  // all posters indexed by showId
   mapping (uint => uint256[]) showIdToPosterId;
+
+  // map ticketId for sale with its price
   mapping (uint256 => uint256) ticketsForSale;
+
+  // map ticketId for exchange with the preferred [row, col]
   mapping (uint256 => uint256[]) ticketsForExchange;
 
   Ticket ticketingSystem;
   Poster posterSystem;
 
+  // time (in seconds) before the event starts that tickets can start
+  // being validated 
   uint constant ACCESS_ALLOWED_BEFORE = 7200;
 
+  // check that for every show being intitialized there's a title, a price and a date
   modifier validShows(string[] memory _showTitles, uint[] memory _showPrices,
     uint[][] memory _showDates)
   {
@@ -61,12 +71,14 @@ contract TicketBookingSystem is Ownable {
     _;
   }
 
+  // check that there's at least one room to host the shows
   modifier validRooms(uint[][] memory _roomDetails)
   {
     require(_roomDetails.length>0, "There has to be at least one room!");
     _;
   }
 
+  // check that for every date there's a valid room assigned
   modifier validRoomAssignment(uint[] memory _showDates, uint[] memory _roomAssignment,
     uint[][] memory _roomDetails)
   {
@@ -79,24 +91,28 @@ contract TicketBookingSystem is Ownable {
     _;
   }
 
+  // check that the url for the seat view is non empty
   modifier validSeatView(string memory _seatViewUrl)
   {
     require(bytes(_seatViewUrl).length > 0, "A URL to retrieve seat views must be provided!");
     _;
   }
 
+  // check that show id exists
   modifier showExists(uint _showId)
   {
     require(shows[_showId].id == _showId, "Show id doesn't exist!");
     _;
   }
 
+  // check that the a show is scheduled for a specific date
   modifier showHasDate(uint _showId, uint _date)
   {
     require(shows[_showId].dateToRoom[_date].rows > 0, "Show does not have date!");
     _;
   }
 
+  // check if a specific seat is available for a show scheduled in a particular date
   modifier showOnDateHasSeatForSale(uint _showId, uint _date, uint _seatRow, uint _seatCol)
   {
     require(shows[_showId].status == Status.Scheduled, "Show is not on sale!");
@@ -106,24 +122,28 @@ contract TicketBookingSystem is Ownable {
     _;
   }
 
+  // check if the caller is sending enough Ether
   modifier paidEnough(uint _price)
   { 
     require(msg.value >= _price, "Account does not have enough Ether!"); 
     _;
   }
 
+  // check that the ticket id exists
   modifier ticketExists(uint256 _ticketId)
   {
     require(ticketingSystem.ticketExists(_ticketId), "Ticket doesn't exist!");
     _;
   }
 
+  // check if the caller is the owner of the ticket
   modifier onlyTicketOwner(uint256 _ticketId)
   {
     require(ticketingSystem.ownerOf(_ticketId) == msg.sender, "Account is not ticket owner!");
     _;
   }
 
+  // events used
   event TicketCreated(uint ticketId);
   event TicketDestroyed(uint ticketId);
   event ShowCancelled(uint showId);
@@ -132,6 +152,10 @@ contract TicketBookingSystem is Ownable {
   event TicketForExchange(uint ticketId, uint row, uint column);
   event TicketTraded(uint ticketId);
 
+  // initializes all shows with title, price and dates and associates each date with a room
+  // each room is initialized with the number of rows and columns it has, the remaining number
+  // of seats and all of its seats
+  // every seat is created individually with its row, column and the URL for the seatview
   constructor(string[] memory _showTitles, uint[] memory _showPrices, uint[][] memory _showDates,
     uint[][] memory _roomDetails, uint[][] memory _roomAssignment, string memory _seatViewUrl,
     Ticket ticketContract, Poster posterContract)
@@ -150,6 +174,7 @@ contract TicketBookingSystem is Ownable {
     }
   }
 
+  // add show details: id, title, price and status (by default 'Scheduled')
   function addDetailsToShow(uint _idx, string memory _title, uint _price) private
   {
     shows[_idx].id = _idx;
@@ -158,6 +183,8 @@ contract TicketBookingSystem is Ownable {
     shows[_idx].status = defaultStatus;
   }
 
+  // for every date available for a show assign a room and create all the seats
+  // belonging to the room
   function addDatesToShow(uint _idx, uint[] memory _showDates, uint[][] memory _roomDetails,
     uint[] memory _roomAssignment, string memory _seatViewUrl) private
     validRoomAssignment(_showDates, _roomAssignment, _roomDetails)
@@ -170,6 +197,7 @@ contract TicketBookingSystem is Ownable {
     }
   }
 
+  // add room details: rows, columns and remaining seats (by default is all seats)
   function addDetailsToRoom(uint _showId, uint _dateId, uint[] memory _roomDetails) private
   {
     uint rows = _roomDetails[0];
@@ -179,6 +207,9 @@ contract TicketBookingSystem is Ownable {
     shows[_showId].dateToRoom[_dateId].remainingSeats = rows*cols;
   }
 
+  // add all the seats to the room
+  // each seat is initialized with: id, row, column, the seat view ULR and a boolean
+  // representing if the seat is available (by default 'True')
   function addSeatsToRoom(uint _showId, uint _dateId, string memory _seatViewUrl) private
     validSeatView(_seatViewUrl)
   {
@@ -204,6 +235,7 @@ contract TicketBookingSystem is Ownable {
     }
   }
 
+  // public function to retrieve show details given the show id
   function getShow(uint _showId) public view showExists(_showId) returns (
     uint showId,
     string memory showTitle,
@@ -220,6 +252,7 @@ contract TicketBookingSystem is Ownable {
     );
   }
 
+  // public function to retrieve room details given show id and date
   function getRoomForDate(uint _showId, uint _date) public view 
     showExists(_showId)
     showHasDate(_showId, _date)
@@ -228,6 +261,7 @@ contract TicketBookingSystem is Ownable {
     return (shows[_showId].dateToRoom[_date]);
   }
 
+  // helper function to map the show status index to a string
   function showStatusToString(Status _showStatus) internal pure returns (string memory)
   { 
     if (_showStatus == Status.Scheduled) return "Scheduled";
@@ -237,41 +271,60 @@ contract TicketBookingSystem is Ownable {
     return "Invalid State";
   }
 
+  // task 2: buy function
+  // payable function that customers can call to buy a ticket for a specific show
+  // data and seat (row and column)
+  // it creates an instance of the Ticket contract assinging the caller as the owner
   function buy(uint _showId, uint _date, uint _seatRow, uint _seatCol) public payable
     showOnDateHasSeatForSale(_showId, _date, _seatRow, _seatCol)
     paidEnough(shows[_showId].price)
   {
+    // give return if the value sent is higher that the actual ticket price
     uint ticketCost = shows[_showId].price;
     if (msg.value > ticketCost)
       payable(msg.sender).transfer(msg.value - ticketCost);
 
+    // creates ticket instance
     uint256 ticketId = ticketingSystem.createTicket(msg.sender, _showId, _date, _seatRow, _seatCol);
+    // the ticket is saved for that specific show
     showIdToTicketId[_showId].push(ticketId);
+    // an event is emmited 
     emit TicketCreated(ticketId);
     
+    // the seat is marked sa unavailable
     shows[_showId].dateToRoom[_date].seats[_seatRow][_seatCol].isAvailable = false;
+    // and the total number of remaining seats in the room decreases by 1
     shows[_showId].dateToRoom[_date].remainingSeats = shows[_showId].dateToRoom[_date].remainingSeats - 1;
   }
 
+  // public function to retrieve the ticket owner given a ticket id
   function getOwnerOfTicket(uint256 _ticketId) public view returns (address)
   {
     return (ticketingSystem.ownerOf(_ticketId));
   }
 
+  // public funtion to retrieve the poster owner given a poster id
   function getOwnerOfPoster(uint256 _posterId) public view returns (address)
   {
     return (posterSystem.ownerOf(_posterId));
   }
 
+  // task 3: verify function
+  // returns if a ticket is valid or not and the owner address given a ticket id
   function verify(uint256 _ticketId) public view returns (bool, address)
   { 
+    // also validates that the ticket exists (i.e. has not been used before)
     (uint showId, uint date, , ) = ticketingSystem.getTicketInfo(_ticketId);
+    // ticket is expired (no longer valid) if the date of the show is past the current date
     bool isExpired = date < block.timestamp;
+    // check that show is on scheduled (i.e. has not been cancelled)
     bool showIsOnSchedule = shows[showId].status == Status.Scheduled;
     bool isValid = !isExpired && showIsOnSchedule;
     return (isValid, ticketingSystem.ownerOf(_ticketId)); 
   }
 
+  // public function that only the owner can call to cancel a show given a show id
+  // it automatically issues a refund for a the tickets sold for that show
   function cancelShow(uint _showId) public
     onlyOwner()
     showExists(_showId)
@@ -285,12 +338,18 @@ contract TicketBookingSystem is Ownable {
     }
   }
 
+  // task 4: refund function
+  // refunds the price of the ticket to owner of the ticket given a ticket id
+  // after the refund is issued the ticket is destroyed
   function refund(uint256 _ticketId) private
   {
+    // verify that the ticket exists, retrieve who the owner is and whether the ticket 
+    // has expired 
     address owner = ticketingSystem.ownerOf(_ticketId);
     (uint showId, uint date, , ) = ticketingSystem.getTicketInfo(_ticketId);
     uint amount = shows[showId].price;
     bool isExpired = date < block.timestamp;
+    // if not expired then burn the ticket and transfer the ether to the owner
     if (!isExpired) {
       ticketingSystem.destroyTicket(_ticketId);
       payable(owner).transfer(amount); // refund the Eth
@@ -298,6 +357,8 @@ contract TicketBookingSystem is Ownable {
     }
   }
 
+  // task 5: validate function
+  // 
   function validate(uint256 _ticketId) public
     onlyOwner()
   {
@@ -367,12 +428,19 @@ contract TicketBookingSystem is Ownable {
     tradeTicket(ownerAddress2, ownerAddress1, _ticketId2);
   }
 
+  // task 6: tradeTicket function
+  // 
   function tradeTicket(address _from, address _to, uint256 _ticketId) private
   {
     ticketingSystem.safeTransferFrom(_from, _to, _ticketId);
     emit TicketTraded(_ticketId);
   }
 
-  //function destroy()
-  //send fund to owner
+  // emergency function that only the owner call call
+  // destroys the contract and claims the funds
+  function shutdown() external
+    onlyOwner()
+  {
+    selfdestruct(payable(msg.sender));
+  }
 }

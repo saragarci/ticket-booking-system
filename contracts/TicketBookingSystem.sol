@@ -340,7 +340,7 @@ contract TicketBookingSystem is Ownable {
 
   // task 4: refund function
   // refunds the price of the ticket to owner of the ticket given a ticket id
-  // after the refund is issued the ticket is destroyed
+  // after the refund is issued the ticket is destroyed (i.e. burned)
   function refund(uint256 _ticketId) private
   {
     // verify that the ticket exists, retrieve who the owner is and whether the ticket 
@@ -358,22 +358,32 @@ contract TicketBookingSystem is Ownable {
   }
 
   // task 5: validate function
-  // 
+  // it can only be called by the owner during a specific timeframe. In particular,
+  // after (show date - ACCESS_ALLOWED_BEFORE) and before show date
+  // Upon validation the ticket is destroyed (i.e. burned) and a poster is released
+  // as an instance of POSTER
   function validate(uint256 _ticketId) public
     onlyOwner()
   {
     address owner = ticketingSystem.ownerOf(_ticketId);
     (uint showId, uint date, , ) = ticketingSystem.getTicketInfo(_ticketId);
+    // check that the function is called only during the timeframe
+    // after the show date and before ACCESS_ALLOWED_BEFORE (2 hours)
     require(block.timestamp > (date-ACCESS_ALLOWED_BEFORE)
       && block.timestamp < date, "You can only access the show 2 hours before it starts!");
+    // check that show is scheduled (i.e. not cancelled)
     require(shows[showId].status == Status.Scheduled, "Show is not on schedule!");
     
+    // destroy ticket
     ticketingSystem.destroyTicket(_ticketId);
     emit TicketDestroyed(_ticketId);
 
+    // release poster
     releasePoster(owner, showId);
   }
 
+  // helper function that creates a poster for the user that just got their ticket
+  // validated
   function releasePoster(address _attendee, uint _showId) private
   {
     uint256 posterId = posterSystem.createPoster(_attendee, _showId);
@@ -381,47 +391,67 @@ contract TicketBookingSystem is Ownable {
     emit PosterCreated(posterId);
   }
 
+  // Public function that allows owners to add their tickets for sale and
+  // specify the selling price
   function setTicketForSale(uint256 _ticketId, uint256 _price) public
     onlyTicketOwner(_ticketId)
   {
     ticketsForSale[_ticketId] = _price;
+    // an event is sent to notify about this
     emit TicketForSale(_ticketId, _price);
   }
 
+  // Public payable function that allows users to buy a ticket for sale
   function buyTicketForTrade(uint256 _ticketId) public payable
     ticketExists(_ticketId)
   {
+    // check that ticket is for sale
     require(ticketsForSale[_ticketId] > 0, "Ticket is not for sale!");
     uint256 ticketCost = ticketsForSale[_ticketId];
     address ownerAddress = ticketingSystem.ownerOf(_ticketId);
+    // and that the caller is sending enought Ether to pay for the ticket
     require(msg.value >= ticketCost, "Account does not have enough Ether!");
 
+    // remove ticket from available tickets for sale
     delete ticketsForSale[_ticketId];
+    // transfer the ether to the current owner of the ticket
     payable(ownerAddress).transfer(ticketCost);
+    // transfer the remaining ether sent
     if (msg.value > ticketCost)
       payable(msg.sender).transfer(msg.value - ticketCost);
+    // finally transfer the ticket to the buyer (i.e. caller of the function)
     tradeTicket(ownerAddress, msg.sender, _ticketId);
   }
 
+  // Public function that allows owners to add their tickets for exchange and
+  // specify the preference of row and column they would would like to do the exchange for
   function setTicketForExchange(uint256 _ticketId, uint _row, uint _col) public
     onlyTicketOwner(_ticketId)
   {
     ticketsForExchange[_ticketId] = [_row, _col];
+    // an event is sent to notify about this
     emit TicketForExchange(_ticketId, _row, _col);
   }
 
+  // Public function that allows users to exchange a ticket given a ticket that
+  // has already been set up as 'ticket for exchange' 
   function exchangeTicket(uint256 _ticketId1, uint256 _ticketId2) public
     onlyTicketOwner(_ticketId1)
   {
+    // check that ticket1 is for exchnage
     require(ticketsForExchange[_ticketId2].length > 0, "Ticket is not for exchange!");
     (uint showId1, uint date1, uint row1, uint col1) = ticketingSystem.getTicketInfo(_ticketId1);
     (uint showId2, uint date2, , ) = ticketingSystem.getTicketInfo(_ticketId2);
+    // both tickets match in show and date
     require(showId1 == showId2 && date1 == date2, "Ticket does not match show and/or date!");
+    // and ticket2 matches the preferred row and column
     require(row1 == ticketsForExchange[_ticketId2][0]
       && col1 == ticketsForExchange[_ticketId2][1],
       "This ticket doesn't have the required seat in order to be exhanged!");
-    
+
+    // remove ticket from available tickets for exchange
     delete ticketsForExchange[_ticketId2];
+    // do the exchange
     address ownerAddress1 = ticketingSystem.ownerOf(_ticketId1);
     address ownerAddress2 = ticketingSystem.ownerOf(_ticketId2);
     tradeTicket(ownerAddress1, ownerAddress2, _ticketId1);
@@ -429,7 +459,7 @@ contract TicketBookingSystem is Ownable {
   }
 
   // task 6: tradeTicket function
-  // 
+  // transfer the ticket from the current owner to a new owner
   function tradeTicket(address _from, address _to, uint256 _ticketId) private
   {
     ticketingSystem.safeTransferFrom(_from, _to, _ticketId);

@@ -18,6 +18,8 @@ contract Poster is ERC721, Ownable {
 
   constructor() ERC721("Poster", "PTR") {}
 
+  // returns a new minted poster an assigns this to the buyer
+  // show id is stored in a mapping indexed by token id
   function createPoster(address _buyer, uint _showId) public
     onlyOwner() returns (uint256)
   {

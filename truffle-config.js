@@ -12,7 +12,7 @@ module.exports = {
       port: 8545,
       network_id: "*"
     },
-    rinkeby: { // deploy on Ropsten
+    rinkeby: {
       provider: () =>
         new HDWalletProvider({
           mnemonic: {

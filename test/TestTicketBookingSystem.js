@@ -1,5 +1,5 @@
-var Ticket = artifacts.require('Ticket')
-var TicketBookingSystem = artifacts.require('TicketBookingSystem')
+const Ticket = artifacts.require('Ticket')
+const TicketBookingSystem = artifacts.require('TicketBookingSystem')
 const truffleAssert = require('truffle-assertions')
 
 contract('TicketBookingSystem', function(accounts) {   

@@ -21,6 +21,8 @@ contract Ticket is ERC721, Ownable {
 
   constructor() ERC721("Ticket", "TKT") {}
 
+  // returns a new minted ticket an assigns this to the buyer
+  // show id, date, seat row and column are stored in a mapping indexed by token id
   function createTicket(address _buyer, uint _showId, uint _date, uint _seatRow, uint _seatCol)
     public onlyOwner() returns (uint256)
   {
@@ -38,6 +40,7 @@ contract Ticket is ERC721, Ownable {
     return newTokenId;
   }
 
+  // public function that returns all information for a given token id: show id, date, seat row and column
   function getTicketInfo(uint256 _tokenId) public view returns (uint, uint, uint, uint)
   {
     require(_exists(_tokenId), "Ticket doesn't exist!");
@@ -49,11 +52,15 @@ contract Ticket is ERC721, Ownable {
     );
   }
 
+  // public function only the owner can call
+  // returns whether a token exists or not (i.e. has not been burned)
   function ticketExists(uint256 _tokenId) public view onlyOwner() returns (bool)
   {
     return _exists(_tokenId);
   }
 
+  // public function only the owner can call
+  // burns a token id
   function destroyTicket(uint256 _tokenId) public onlyOwner()
   {
     _burn(_tokenId);

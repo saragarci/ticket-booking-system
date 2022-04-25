@@ -2,6 +2,15 @@
 
 This application implements an Etherem smart contract using Solidity. The goal of this smart contract, `TicketBookingSystem`, is to manage ticket sales for shows in theatre or cinemas, and to maintain a public collection of shows that each user has attended. Two Non-Fungible Tokens (NFTs) `Ticket` and `Poster` are used to achieve this.
 
+The smart contracts have been implemented in Solidity.
+The application has been deployed into the Ropsten Test Network. Truffle, Infura and MetaMask were used for this.
+
+Class diagram:
+
+<p align="center">
+  <img src="images/ClassDiagram.png"/>
+</p>
+
 ## Usage
 
 ### Dependencies
@@ -22,13 +31,14 @@ The same needs to be done for the client. `cd` into `client` and install all the
 truffle develop
 ```
 
-### Compile and migrate smart contracts
+1. Compile and migrate smart contracts
 ```
 compile
 migrate
 ```
 
-### Run tests
+2. Run tests
+
 Open a new terminal and run ganache setting the time for the first block:
 ```
 // in another terminal (i.e. not in the truffle develop prompt)
@@ -52,7 +62,6 @@ npm run start
 
 ## Application functionality
 
-This allows a user to:
 * **buy**: Buy a ticket for a specific show, date and seat. Upon completetion of this step, the user receives a `Ticket` token.
 * **verify**: Allows anyone with the token ID to check the validity of the ticket and the address it is supposed to be used by.
 * **refund**: This function refunds the tickets if the show gets cancelled.
@@ -66,6 +75,7 @@ This allows a user to:
 * [React Truffle Box](https://trufflesuite.com/boxes/react/)
 * [Open Zeppelin](https://docs.openzeppelin.com/)
 * [Solidity](https://docs.soliditylang.org/en/latest/)
+* [web3.js - Ethereum JavaScript API](https://web3js.readthedocs.io/en/v1.7.3/)
 
 ### Contributors
 
